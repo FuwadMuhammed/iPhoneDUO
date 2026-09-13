@@ -2,7 +2,9 @@
 
 An interactive WebGL preview of a book-fold handset, built with TypeScript, Vite and three.js.
 
-> Built with the help of [Stele](https://stele.so) — a canvas for frontend devs and designers to collect references, screens and inspiration in one place as code.
+> Built with the help of [Stele](https://stele.so) - a canvas for frontend devs and designers to collect references, screens and inspiration in one place as code.
+
+https://github.com/user-attachments/assets/af727494-1789-42be-868a-bcddf8f3c3fc
 
 ## Run
 

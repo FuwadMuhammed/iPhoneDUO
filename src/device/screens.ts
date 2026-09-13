@@ -68,9 +68,9 @@ function splitClock(plate: HTMLImageElement): ClockPlates {
 
 export async function loadLockScreen(): Promise<LockScreen> {
   const [backdrop, sky, mountain, innerClock, outerClock] = await Promise.all([
-    loadImage(`${UI_ASSETS}base.jpg`),
-    loadImage(`${UI_ASSETS}top.png`),
-    loadImage(`${UI_ASSETS}middle.png`),
+    loadImage(`${UI_ASSETS}base.webp`),
+    loadImage(`${UI_ASSETS}top.webp`),
+    loadImage(`${UI_ASSETS}middle.webp`),
     loadImage(`${UI_ASSETS}clock-inner.avif`),
     loadImage(`${UI_ASSETS}clock-outer.avif`),
   ]);
@@ -125,7 +125,7 @@ export function paintPanelLockScreen(
   return canvas;
 }
 
-export function paintFittedImage(image: ScreenImage): HTMLCanvasElement {
+function paintFittedImage(image: ScreenImage): HTMLCanvasElement {
   const canvas = createCanvas(INNER_WIDTH, HEIGHT);
   const context = canvasContext(canvas);
   context.fillStyle = '#101418';

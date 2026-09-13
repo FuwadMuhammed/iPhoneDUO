@@ -1,6 +1,6 @@
 import type { StageView } from '../stage/stage';
 import type { ScreenPanel } from './screens';
-export type ScreenRoll = 'clockwise' | 'anticlockwise';
+type ScreenRoll = 'clockwise' | 'anticlockwise';
 export type { ScreenPanel };
 export interface Highlight {
   readonly id: string;

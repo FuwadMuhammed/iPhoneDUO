@@ -6,6 +6,8 @@ const NUDGE = 0.5;
 const SLIDER_STEPS = 1000;
 const PLUS_MARK = '<path d="M12 6.6v10.8M6.6 12h10.8" />';
 const DRAG_MARK = '<path d="M9.6 8 5.6 12l4 4M14.4 8l4 4-4 4" />';
+const COMPACT_QUERY =
+	"(max-width: 900px), (max-height: 540px) and (orientation: landscape)";
 export interface Rail {
 	readonly slider: HTMLInputElement;
 	readonly current: Highlight;
@@ -13,6 +15,7 @@ export interface Rail {
 	select(highlight: Highlight): void;
 	collapse(): void;
 	step(delta: number): void;
+	unlock(): void;
 }
 function mark(paths: string): SVGSVGElement {
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -37,6 +40,7 @@ function buildItem(highlight: Highlight): {
 	item: HTMLLIElement;
 	box: HTMLElement;
 	chip: HTMLButtonElement;
+	detail: HTMLElement;
 } {
 	const item = document.createElement("li");
 	item.className = "highlight";
@@ -80,22 +84,26 @@ function buildItem(highlight: Highlight): {
 	}
 	box.append(chip, detail);
 	item.append(box);
-	return { item, box, chip };
+	return { item, box, chip, detail };
 }
 export function createRail(
 	list: HTMLElement,
+	sheet: HTMLElement,
 	previous: HTMLButtonElement,
 	upcoming: HTMLButtonElement,
 	onSelect: (highlight: Highlight) => void,
 ): Rail {
 	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	const compact = window.matchMedia(COMPACT_QUERY);
 	const slider = foldControl();
 	const boxes: HTMLElement[] = [];
 	const items: HTMLLIElement[] = [];
+	const details: HTMLElement[] = [];
 	let current = HIGHLIGHTS[0]!;
 	let openId: string | null = current.id;
+	let locked = true;
 	HIGHLIGHTS.forEach((highlight) => {
-		const { item, box, chip } = buildItem(highlight);
+		const { item, box, chip, detail } = buildItem(highlight);
 		if (highlight.adjustable) {
 			const control = document.createElement("label");
 			control.className = "fold-control";
@@ -103,24 +111,28 @@ export function createRail(
 			hint.className = "fold-label";
 			hint.textContent = "Drag below to open and close";
 			control.append(hint, slider);
-			box.querySelector(".highlight-detail")?.append(control);
+			detail.append(control);
 		}
 		chip.addEventListener("click", () => select(highlight));
 		list.append(item);
 		boxes.push(box);
 		items.push(item);
+		details.push(detail);
 	});
 	function morph(change: () => void): void {
 		if (reduced) {
 			change();
 			return;
 		}
-		const before = boxes.map((box) => box.getBoundingClientRect());
+		const targets = compact.matches ? [sheet] : boxes;
+		const before = targets.map((box) => box.getBoundingClientRect());
+		const shown = sheet.firstElementChild;
+		targets.forEach((box) => box.getAnimations().forEach((animation) => animation.cancel()));
 		change();
-		boxes.forEach((box, index) => {
+		targets.forEach((box, index) => {
 			const from = before[index]!;
 			const to = box.getBoundingClientRect();
-			const shift = from.top - to.top;
+			const shift = compact.matches ? 0 : from.top - to.top;
 			const still =
 				Math.abs(from.width - to.width) < NUDGE &&
 				Math.abs(from.height - to.height) < NUDGE &&
@@ -142,24 +154,67 @@ export function createRail(
 				{ duration: MORPH_MS, easing: MORPH_EASING },
 			);
 		});
+		const incoming = sheet.firstElementChild;
+		if (compact.matches && incoming && incoming !== shown) {
+			incoming.animate([{ opacity: 0 }, { opacity: 1 }], {
+				duration: 320,
+				delay: 120,
+				easing: "ease",
+				fill: "backwards",
+			});
+		}
+	}
+	function reveal(index: number, smooth: boolean): void {
+		const item = items[index];
+		if (!item) return;
+		const behavior = smooth && !reduced ? "smooth" : "auto";
+		if (compact.matches) {
+			list.scrollTo({
+				left: item.offsetLeft - (list.clientWidth - item.offsetWidth) / 2,
+				behavior,
+			});
+		} else {
+			const growing = boxes.flatMap((box) => box.getAnimations());
+			void Promise.allSettled(growing.map((animation) => animation.finished)).then(() => {
+				if (compact.matches || list.scrollHeight <= list.clientHeight) return;
+				const box = item.getBoundingClientRect();
+				const view = list.getBoundingClientRect();
+				const top = box.top - view.top - NUDGE * 8;
+				const bottom = box.bottom - view.bottom + NUDGE * 8;
+				const delta = top < 0 ? top : bottom > 0 ? Math.min(bottom, top) : 0;
+				if (delta !== 0) list.scrollBy({ top: delta, behavior });
+			});
+		}
 	}
 	function paint(): void {
 		const index = HIGHLIGHTS.indexOf(current);
 		items.forEach((item, at) => {
 			const open = HIGHLIGHTS[at]!.id === openId;
 			item.classList.toggle("is-open", open);
+			item.classList.toggle("is-current", at === index);
 			item
 				.querySelector(".highlight-chip")
 				?.setAttribute("aria-expanded", String(open));
 		});
+		if (compact.matches) {
+			const open = details[index];
+			if (open && sheet.firstElementChild !== open) sheet.replaceChildren(open);
+			sheet.classList.toggle("is-collapsed", openId === null);
+		} else {
+			details.forEach((detail, at) => {
+				if (detail.parentElement !== boxes[at]) boxes[at]!.append(detail);
+			});
+			sheet.classList.add("is-collapsed");
+		}
 		previous.disabled = index <= 0;
 		upcoming.disabled = index >= HIGHLIGHTS.length - 1;
-		slider.disabled = !current.adjustable || openId !== current.id;
+		slider.disabled = locked || !current.adjustable || openId !== current.id;
 	}
 	function select(highlight: Highlight): void {
 		current = highlight;
 		openId = highlight.id;
 		morph(paint);
+		reveal(HIGHLIGHTS.indexOf(highlight), true);
 		onSelect(highlight);
 	}
 	function collapse(): void {
@@ -179,6 +234,10 @@ export function createRail(
 	}
 	previous.addEventListener("click", () => step(-1));
 	upcoming.addEventListener("click", () => step(1));
+	compact.addEventListener("change", () => {
+		paint();
+		reveal(HIGHLIGHTS.indexOf(current), false);
+	});
 	paint();
 	return {
 		slider,
@@ -191,5 +250,9 @@ export function createRail(
 		select,
 		collapse,
 		step,
+		unlock() {
+			locked = false;
+			paint();
+		},
 	};
 }

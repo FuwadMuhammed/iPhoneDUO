@@ -1,9 +1,8 @@
+import { requireElement } from '../dom';
 export class Notice {
   private element: HTMLElement;
   constructor(selector: string) {
-    const found = document.querySelector<HTMLElement>(selector);
-    if (!found) throw new Error(`Missing element "${selector}".`);
-    this.element = found;
+    this.element = requireElement(selector);
   }
   show(message: string, seconds?: number) {
     this.element.textContent = message;

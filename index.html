@@ -8,12 +8,8 @@
     <title>iPhone Duo - Animation</title>
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/favicon.ico" />
-    <link rel="preload" href="/assets/iPhone_Duo_Render.usdc" as="fetch" crossorigin />
-    <link rel="preload" href="/assets/ui/base.jpg" as="image" />
-    <link rel="preload" href="/assets/ui/top.png" as="image" />
-    <link rel="preload" href="/assets/ui/middle.png" as="image" />
-    <link rel="preload" href="/assets/ui/clock-inner.avif" as="image" />
-    <link rel="preload" href="/assets/ui/clock-outer.avif" as="image" />
+    <!-- Start the largest download early, at low priority so it never holds up the page, styles or menu. -->
+    <link rel="preload" href="/assets/iPhone_Duo_Render.usdc" as="fetch" crossorigin fetchpriority="low" />
   </head>
   <body>
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
@@ -76,7 +72,23 @@
           aria-label="3D model of the device. Drag to rotate and scroll to zoom."
         ></div>
 
+        <div
+          id="loader"
+          class="loader"
+          role="progressbar"
+          aria-label="Loading 3D model"
+          aria-busy="true"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+          <span class="loader-spinner" aria-hidden="true"></span>
+          <span class="loader-label">Loading 3D model</span>
+          <span class="loader-track" aria-hidden="true"><span class="loader-bar"></span></span>
+        </div>
+
         <div class="highlights" id="highlights">
+          <div class="highlight-sheet is-collapsed" id="highlight-sheet" aria-live="polite"></div>
           <div class="highlight-steps">
             <button type="button" id="previous-highlight" class="step-button" aria-label="Previous highlight">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 14.5 5.5-5.5 5.5 5.5" /></svg>

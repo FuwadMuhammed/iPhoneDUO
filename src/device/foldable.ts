@@ -27,6 +27,8 @@ import {
 import { ScreenWipe } from "./wipe";
 
 const MODEL_URL = `${import.meta.env.BASE_URL}assets/iPhone_Duo_Render.usdc`;
+// Fallback for progress when the server compresses the response and omits its length.
+const MODEL_BYTES = 3_638_212;
 const MODEL_SCALE = 100;
 const MODEL_DROP = 5.8974;
 const COVER_HALF = "upTUAKvMVkPOMKq";
@@ -183,6 +185,8 @@ export interface Foldable {
 	render(renderer: WebGLRenderer): void;
 	showImage(image: HTMLCanvasElement): void;
 	clearImage(): void;
+	/** Paints the remaining fitted lock screens during idle time so later highlights switch without a hitch. */
+	warmUp(): void;
 }
 // The USD references a few textures that are not shipped. A texture whose image never loaded samples as
 // black, so an absent AO map darkens the hinge cover and an absent base map blacks out the camera plate.
@@ -288,47 +292,60 @@ function sameDress(a: Dress, b: Dress): boolean {
 		a.dim === b.dim
 	);
 }
-export async function loadFoldable(
+export function loadModel(
+	onProgress?: (fraction: number) => void,
+): Promise<Group> {
+	return new USDLoader().loadAsync(MODEL_URL, (event) => {
+		const total = event.total || MODEL_BYTES;
+		onProgress?.(Math.min(event.loaded / total, 1));
+	});
+}
+export function createFoldable(
+	model: Group,
 	lockScreen: LockScreen,
 	anisotropy: number,
 	environment: Texture | null,
-): Promise<Foldable> {
+): Foldable {
 	const root = new Group();
 	const bend = { value: 0 };
 	const referenceEye = { value: UI_REFERENCE_EYE.clone() };
 	const backdrop = createTexture(lockScreen.backdrop, anisotropy);
 	const sky = createTexture(lockScreen.sky, anisotropy, true);
 	const mountain = createTexture(lockScreen.mountain, anisotropy, true);
-	const fitted: Record<ScreenKind, Record<ScreenTurn, Texture>> = {
-		inner: {
-			none: createTexture(
-				paintPanelLockScreen(lockScreen, "inner", "none"),
-				anisotropy,
-			),
-			clockwise: createTexture(
-				paintPanelLockScreen(lockScreen, "inner", "clockwise"),
-				anisotropy,
-			),
-			anticlockwise: createTexture(
-				paintPanelLockScreen(lockScreen, "inner", "anticlockwise"),
-				anisotropy,
-			),
-		},
-		outer: {
-			none: createTexture(
-				paintPanelLockScreen(lockScreen, "outer", "none"),
-				anisotropy,
-			),
-			clockwise: createTexture(
-				paintPanelLockScreen(lockScreen, "outer", "clockwise"),
-				anisotropy,
-			),
-			anticlockwise: createTexture(
-				paintPanelLockScreen(lockScreen, "outer", "anticlockwise"),
-				anisotropy,
-			),
-		},
+	// Each fitted lock screen is a full-size canvas paint, so only paint the ones a highlight asks for.
+	const fitted: Record<ScreenKind, Partial<Record<ScreenTurn, Texture>>> = {
+		inner: {},
+		outer: {},
 	};
+	function fittedTexture(kind: ScreenKind, direction: ScreenTurn): Texture {
+		const cached = fitted[kind][direction];
+		if (cached) return cached;
+		const texture = createTexture(
+			paintPanelLockScreen(lockScreen, kind, direction),
+			anisotropy,
+		);
+		fitted[kind][direction] = texture;
+		return texture;
+	}
+	function warmUp(): void {
+		const pending: [ScreenKind, ScreenTurn][] = [];
+		for (const kind of ["inner", "outer"] as const)
+			for (const direction of ["none", "clockwise", "anticlockwise"] as const)
+				if (!fitted[kind][direction]) pending.push([kind, direction]);
+		// The render loop can keep a slow device from ever going idle, so each job also has a deadline.
+		const idle = (callback: () => void): void => {
+			if ("requestIdleCallback" in window)
+				window.requestIdleCallback(callback, { timeout: 1000 });
+			else setTimeout(callback, 120);
+		};
+		const next = (): void => {
+			const job = pending.shift();
+			if (!job) return;
+			fittedTexture(job[0], job[1]);
+			idle(next);
+		};
+		idle(next);
+	}
 	let customTexture: Texture | null = null;
 	let retired: Texture | null = null;
 	const turn: Record<ScreenKind, ScreenTurn> = { inner: "none", outer: "none" };
@@ -353,7 +370,7 @@ export async function loadFoldable(
 			};
 		return {
 			...common,
-			backdrop: fit ? fitted[kind][turn[kind]] : backdrop,
+			backdrop: fit ? fittedTexture(kind, turn[kind]) : backdrop,
 			layered: !fit,
 			clock: !fit,
 		};
@@ -424,7 +441,6 @@ export async function loadFoldable(
 		mountain: new Vector4(),
 		dune: new Vector4(),
 	};
-	const model = await new USDLoader().loadAsync(MODEL_URL);
 	model.scale.multiplyScalar(MODEL_SCALE);
 	model.updateMatrixWorld(true);
 	let halfWidth = 0;
@@ -665,5 +681,6 @@ export async function loadFoldable(
 		showImage,
 		clearImage,
 		render,
+		warmUp,
 	};
 }
