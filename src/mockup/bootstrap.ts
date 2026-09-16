@@ -108,8 +108,11 @@ function buildExportPanel(root: HTMLElement): ExportPanel {
   color.value = DEFAULT_COLOR;
   color.disabled = true;
   color.setAttribute('aria-label', 'Background colour');
+  const colorWrap = document.createElement('div');
+  colorWrap.className = 'mockup-swatch-wrap';
+  colorWrap.append(color);
   const bg = section('Background');
-  bg.row.append(background.element, color);
+  bg.row.append(background.element, colorWrap);
 
   const imageFormat = createSegmented(['png', 'jpeg'], ['PNG', 'JPEG'], 'png');
   const snapshotButton = iconButton('mockup-primary', CAMERA_ICON, 'Export Image');

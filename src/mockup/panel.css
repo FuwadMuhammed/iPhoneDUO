@@ -160,7 +160,8 @@
 .modal-foot {
   flex: none;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   padding: 14px 20px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -177,6 +178,20 @@
 
 .modal-secondary[hidden] {
   display: none;
+}
+
+.modal-primary {
+  padding: 9px 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  transition: filter 150ms ease;
+}
+
+.modal-primary:hover {
+  filter: brightness(1.08);
 }
 
 /* Upload modal: one compact row per highlight, so six-plus states stay scannable in a small overlay
@@ -326,6 +341,10 @@
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.mockup-export-section:last-child {
+  padding-bottom: 14px;
+}
+
 .mockup-export-label {
   display: block;
   margin-bottom: 10px;
@@ -372,19 +391,28 @@
   cursor: default;
 }
 
-.mockup-swatch {
+.mockup-swatch-wrap {
   flex: none;
   width: 32px;
   height: 32px;
+  padding: 3px;
+  border: 1.5px solid rgba(0, 0, 0, 0.16);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.mockup-swatch {
+  width: 100%;
+  height: 100%;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 5px;
   background: none;
   cursor: pointer;
 }
 
 .mockup-swatch::-webkit-color-swatch-wrapper {
-  padding: 2px;
+  padding: 0;
 }
 
 .mockup-swatch::-webkit-color-swatch {
@@ -393,7 +421,7 @@
 }
 
 .mockup-swatch:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: default;
 }
 
@@ -449,7 +477,7 @@
 }
 
 .mockup-tip {
-  margin: 8px 2px 0;
+  margin: 6px 2px 0;
   font-size: 11px;
   line-height: 1.4;
   color: var(--muted);
@@ -458,10 +486,10 @@
 
 .mockup-status {
   display: block;
-  margin-top: 10px;
+  margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
-  min-height: 15px;
+  min-height: 0;
 }
 
 @media (max-width: 480px) {
