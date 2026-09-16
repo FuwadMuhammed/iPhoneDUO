@@ -15,9 +15,6 @@ export interface Highlight {
   readonly shift?: number;
   readonly adjustable?: true;
   readonly tapTarget?: string;
-  readonly image?: string;
-  readonly link?: { readonly url: string; readonly label: string };
-  readonly sponsored?: true;
 }
 const QUARTER = Math.PI / 2;
 const TENT_OPENNESS = 0.4;
@@ -82,28 +79,5 @@ export const HIGHLIGHTS: readonly Highlight[] = [
     screen: 'outer',
     lift: 2,
     tapTarget: 'closed',
-  },
-  {
-    id: 'durability',
-    label: 'Durability',
-    body: 'Grade 5 titanium frame and hinge cover. Scratch-resistant coating on the inner display. Ceramic Shield, front and back. IP68 water and dust resistant.',
-    openness: 0.45,
-    pose: [-0.1, 2.3, 0],
-    view: { distance: 27.5, pitch: 1.52, yaw: 0 },
-    screen: 'outer',
-    lift: -2.2,
-    shift: -2.2,
-    tapTarget: 'closed',
-  },
-  {
-    id: 'stele',
-    label: 'Stele',
-    body: "If you're still manually inspecting elements and taking UI screenshots, you're wasting time. Capture any web UI straight to React code and Figma layers, instantly.",
-    openness: 1,
-    pose: [0, 0, 0],
-    view: { distance: 48, pitch: 1.5, yaw: 0 },
-    image: 'stele',
-    link: { url: 'https://stele.so', label: 'Try Stele' },
-    sponsored: true,
   },
 ];

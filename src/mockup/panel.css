@@ -1,0 +1,477 @@
+/* Everything the mockup layer adds on top of the original page: a toolbar over the viewer, the two
+   modals it opens, and the controls bootstrap.ts/modals.ts render into them. Uses the page's own
+   :root variables (--accent, --surface, --control, --muted, --track, --ease-out, …) so it reads as one
+   native app rather than a bolted-on widget.
+
+   Buttons follow iOS's four system styles throughout: Plain (text only, tinted), Gray (neutral pill,
+   tinted content — rgba(120,120,128,…)), Tinted (accent-tinted pill — rgba(0,113,227,…)) and Filled
+   (solid accent pill, white content). */
+
+.toolbar {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.12);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 200ms ease, filter 200ms ease;
+}
+
+.toolbar-button:hover {
+  background: rgba(120, 120, 128, 0.2);
+}
+
+.toolbar-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.toolbar-button--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.toolbar-button--primary:hover {
+  filter: brightness(1.08);
+}
+
+.toolbar-button--primary.is-recording {
+  background: #ff3b30;
+}
+
+.toolbar-button--primary.is-recording svg {
+  animation: mockup-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes mockup-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Modals */
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 20, 22, 0);
+  transition: background 220ms var(--ease-out);
+}
+
+.modal-backdrop.is-visible {
+  background: rgba(20, 20, 22, 0.4);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: min(420px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: scale(0.96) translateY(6px);
+  transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+
+.modal-backdrop.is-visible .modal {
+  opacity: 1;
+  transform: none;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.modal-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.12);
+  color: var(--muted);
+  transition: background 200ms ease;
+}
+
+.modal-close:hover {
+  background: rgba(120, 120, 128, 0.2);
+}
+
+.modal-close svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.modal-foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.modal-secondary {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.modal-secondary:hover {
+  text-decoration: underline;
+}
+
+.modal-secondary[hidden] {
+  display: none;
+}
+
+/* Upload modal: one compact row per highlight, so six-plus states stay scannable in a small overlay
+   instead of six large dropzones stacked end to end. */
+
+.modal-intro {
+  margin: 0;
+  padding: 14px 20px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.upload-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+}
+
+.upload-row + .upload-row {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.upload-thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--muted);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.upload-thumb.has-image {
+  background: #000;
+}
+
+.upload-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-thumb svg {
+  width: 20px;
+  height: 20px;
+}
+
+.upload-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.upload-info-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dimension-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.copy-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(0, 113, 227, 0.12);
+  color: var(--accent);
+}
+
+.copy-button:hover {
+  background: rgba(0, 113, 227, 0.2);
+}
+
+.copy-button.is-copied {
+  background: rgba(52, 199, 89, 0.15);
+  color: #34c759;
+}
+
+.copy-button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.upload-actions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+
+.upload-action-button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 150ms ease;
+}
+
+.upload-action-button:hover {
+  background: rgba(120, 120, 128, 0.2);
+}
+
+.upload-remove-button {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ff3b30;
+}
+
+.upload-remove-button:hover {
+  text-decoration: underline;
+}
+
+.upload-remove-button[hidden] {
+  display: none;
+}
+
+/* Export modal sections, mounted by bootstrap.ts */
+
+.mockup-export-section {
+  padding: 20px;
+}
+
+.mockup-export-section + .mockup-export-section {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mockup-export-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mockup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mockup-segmented {
+  flex: 1;
+  display: flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 10px;
+  background: rgba(120, 120, 128, 0.12);
+}
+
+.mockup-segmented button {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.mockup-segmented button.is-active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.mockup-segmented button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mockup-swatch {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+
+.mockup-swatch::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.mockup-swatch::-webkit-color-swatch {
+  border: 0;
+  border-radius: 5px;
+}
+
+.mockup-swatch:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mockup-primary {
+  width: 100%;
+  height: 46px;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  transition: filter 150ms ease;
+}
+
+.mockup-primary:hover {
+  filter: brightness(1.08);
+}
+
+.mockup-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.mockup-primary svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.mockup-primary--record {
+  background: #ff3b30;
+}
+
+.mockup-primary--record:hover {
+  filter: brightness(1.08);
+}
+
+.mockup-primary--record.is-recording {
+  background: #d70015;
+}
+
+.mockup-record-dot circle {
+  fill: currentColor;
+}
+
+.mockup-primary--record.is-recording .mockup-record-dot {
+  animation: mockup-pulse 1.4s ease-in-out infinite;
+}
+
+.mockup-tip {
+  margin: 8px 2px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: center;
+}
+
+.mockup-status {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 15px;
+}
+
+@media (max-width: 480px) {
+  .toolbar-button span {
+    display: none;
+  }
+
+  .toolbar-button {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+}

@@ -1,8 +1,8 @@
 import { MathUtils, Vector3 } from 'three';
-import type { Loader, Notice, Uploader } from './components';
+import type { Loader, Notice } from './components';
 import { createFoldable, loadModel, type Foldable } from './device/foldable';
 import { HIGHLIGHTS, type Highlight } from './device/highlights';
-import { loadLockScreen, loadStaticImage, paintCustomImage } from './device/screens';
+import { loadLockScreen, type ScreenPanel, type ScreenTurn } from './device/screens';
 import { createStage, type Offset, type PoseAngles, type Stage, type StageView } from './stage/stage';
 import type { Rail } from './ui/rail';
 const SLIDER_STEPS = 1000;
@@ -14,7 +14,6 @@ const MAX_STEP_SECONDS = 1 / 20;
 const CLICK_TOLERANCE = 4;
 const FOLD_DAMPING = 4.5;
 const SETTLED_MARGIN = 0.02;
-const NOTICE_SECONDS = 4.2;
 const PARALLAX_FALLOFF = 1.5;
 const FADE_START = 0.2;
 const FADE_END = 0.8;
@@ -24,7 +23,6 @@ const ARRIVAL_VIEW: StageView = { distance: 34, pitch: 1.53, yaw: 0.3 };
 // Share of the loading bar each phase fills; the model download dominates.
 const IMAGES_SHARE = 0.15;
 const MODEL_SHARE = 0.7;
-const STELE_URL = `${import.meta.env.BASE_URL}assets/stele.webp`;
 interface Settle {
   readonly highlight: Highlight;
   readonly fromOpenness: number | null;
@@ -40,8 +38,25 @@ export interface ExperienceOptions {
   readonly rail: Rail;
   readonly notice: Notice;
   readonly loader: Loader;
-  readonly uploader: Uploader;
   bindSelect(handler: (highlight: Highlight) => void): void;
+}
+// One upload slot per highlight, described so the upload UI can label it and show the exact pixel box
+// to prepare artwork at. Published on window once the experience is ready — see the bottom of start().
+export interface MockupImageTarget {
+  readonly id: string;
+  readonly label: string;
+  readonly panel: ScreenPanel;
+  readonly turn: ScreenTurn;
+}
+export interface MockupBridge {
+  readonly targets: readonly MockupImageTarget[];
+  setImage(id: string, image: HTMLCanvasElement | null): void;
+  select(id: string): void;
+}
+declare global {
+  interface WindowEventMap {
+    'iphoneduo:bridge': CustomEvent<MockupBridge>;
+  }
 }
 function easeInOut(progress: number): number {
   return progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
@@ -56,7 +71,7 @@ function turn(from: number, to: number, amount: number): number {
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
-export async function start({ host, rack, rail, notice, loader, uploader, bindSelect }: ExperienceOptions): Promise<void> {
+export async function start({ host, rack, rail, notice, loader, bindSelect }: ExperienceOptions): Promise<void> {
   let imagesDone = 0;
   let modelDone = 0;
   const report = (message: string): void =>
@@ -102,17 +117,26 @@ export async function start({ host, rack, rail, notice, loader, uploader, bindSe
     notice.show('The device model could not be loaded. Refresh the page to try again.');
     return;
   }
-  let stelePromise: Promise<HTMLCanvasElement> | null = null;
-  function stele(): Promise<HTMLCanvasElement> {
-    stelePromise ??= loadStaticImage(STELE_URL);
-    return stelePromise;
-  }
   let openness = HIGHLIGHTS[0]!.openness;
   let foldTarget = openness;
   let settle: Settle | null = null;
   let showing = rail.current;
   const nudge = { yaw: 0, pitch: 0, shownYaw: 0, shownPitch: 0 };
-  let hasCustomUpload = false;
+  // One canvas per highlight id, already baked to that highlight's exact panel/orientation by the
+  // mockup module (see MockupBridge below) — applying one is just picking it up when it becomes current.
+  const customImages = new Map<string, HTMLCanvasElement>();
+  function applyHighlightImage(highlight: Highlight): void {
+    const image = customImages.get(highlight.id) ?? null;
+    if (highlight.adjustable) {
+      // The fold view spans one wallpaper across both halves, so a custom image covers both panels too.
+      foldable.setImage('inner', image);
+      foldable.setImage('outer', image);
+      return;
+    }
+    const primary = highlight.screen ?? 'inner';
+    foldable.setImage(primary, image);
+    foldable.setImage(primary === 'inner' ? 'outer' : 'inner', null);
+  }
   function setOpenness(value: number): void {
     openness = value;
     foldable.setOpenness(value);
@@ -120,19 +144,6 @@ export async function start({ host, rack, rail, notice, loader, uploader, bindSe
   }
   function orbitAllowed(): boolean {
     return !settle && (openness <= SETTLED_MARGIN || openness >= 1 - SETTLED_MARGIN);
-  }
-  function showScreenImage(highlight: Highlight): void {
-    if (hasCustomUpload) return;
-    if (highlight.image !== 'stele') {
-      foldable.clearImage();
-      return;
-    }
-    stele().then(
-      (image) => {
-        if (!hasCustomUpload && rail.current === highlight) foldable.showImage(image);
-      },
-      (error) => console.error(error),
-    );
   }
   function arrive(highlight: Highlight, keepOpenness: boolean): void {
     settle = null;
@@ -156,7 +167,7 @@ export async function start({ host, rack, rail, notice, loader, uploader, bindSe
     nudge.yaw = nudge.pitch = nudge.shownYaw = nudge.shownPitch = 0;
     foldable.setRoll(highlight.roll ?? null, highlight.screen ?? 'inner');
     foldable.setFocus(highlight.screen ?? null);
-    showScreenImage(highlight);
+    applyHighlightImage(highlight);
     if (seconds <= 0) {
       arrive(highlight, keepOpenness);
       return;
@@ -323,21 +334,6 @@ export async function start({ host, rack, rail, notice, loader, uploader, bindSe
     if (engaged || travel > CLICK_TOLERANCE || !onModel) return;
     engage(from);
   });
-  uploader.onChange(async (file) => {
-    try {
-      const image = await paintCustomImage(file);
-      hasCustomUpload = true;
-      foldable.showImage(image);
-      uploader.setCustom(true);
-      rail.select(HIGHLIGHTS[1]!);
-    } catch {
-      notice.show('Unable to read this image. Choose a PNG, JPG, or WebP file.', NOTICE_SECONDS);
-    }
-  });
-  uploader.onReset(() => {
-    hasCustomUpload = false;
-    showScreenImage(rail.current);
-  });
   const eye = new Vector3();
   function trackViewpoint(): void {
     eye.copy(stage.eyeInContent());
@@ -349,7 +345,27 @@ export async function start({ host, rack, rail, notice, loader, uploader, bindSe
   setOpenness(0);
   foldTarget = 0;
   rail.unlock();
-  uploader.setDisabled(false);
+  // Announced on window rather than threaded through ExperienceOptions/main.ts, so the mockup module
+  // (a separate entry point) can drive per-highlight uploads without this file knowing it exists.
+  const bridge: MockupBridge = {
+    targets: HIGHLIGHTS.map((highlight) => ({
+      id: highlight.id,
+      label: highlight.label,
+      panel: highlight.screen ?? 'inner',
+      turn: highlight.roll ?? 'none',
+    })),
+    setImage(id, image) {
+      if (image) customImages.set(id, image);
+      else customImages.delete(id);
+      const highlight = HIGHLIGHTS.find((entry) => entry.id === id);
+      if (highlight && rail.current.id === id) applyHighlightImage(highlight);
+    },
+    select(id) {
+      const highlight = HIGHLIGHTS.find((entry) => entry.id === id);
+      if (highlight) rail.select(highlight);
+    },
+  };
+  window.dispatchEvent(new CustomEvent('iphoneduo:bridge', { detail: bridge }));
   settleOn(rail.current, { seconds: ARRIVAL_SECONDS });
   let previous = performance.now();
   function frame(now: number): void {
@@ -373,7 +389,4 @@ export async function start({ host, rack, rail, notice, loader, uploader, bindSe
   await nextFrame();
   loader.done();
   foldable.warmUp();
-  const prefetch = (): void => void stele().catch(() => {});
-  if ('requestIdleCallback' in window) window.requestIdleCallback(prefetch, { timeout: 3000 });
-  else setTimeout(prefetch, 1500);
 }

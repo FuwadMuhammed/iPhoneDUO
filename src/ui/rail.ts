@@ -14,7 +14,6 @@ export interface Rail {
 	readonly isOpen: boolean;
 	select(highlight: Highlight): void;
 	collapse(): void;
-	step(delta: number): void;
 	unlock(): void;
 }
 function mark(paths: string): SVGSVGElement {
@@ -61,38 +60,20 @@ function buildItem(highlight: Highlight): {
 	chip.append(badge, name);
 	const detail = document.createElement("div");
 	detail.className = "highlight-detail";
-	if (highlight.sponsored) {
-		const tag = document.createElement("span");
-		tag.className = "sponsored-tag";
-		tag.textContent = "check out my work";
-		detail.append(tag);
-	}
-	const copy = document.createElement("p");
-	copy.className = "info-copy";
-	const lead = document.createElement("strong");
-	lead.textContent = `${highlight.label}.`;
-	copy.append(lead, ` ${highlight.body}`);
-	detail.append(copy);
-	if (highlight.link) {
-		const link = document.createElement("a");
-		link.className = "highlight-link";
-		link.href = highlight.link.url;
-		link.target = "_blank";
-		link.rel = "noopener noreferrer";
-		link.textContent = `${highlight.link.label} →`;
-		detail.append(link);
+	// Only the adjustable (Foldable design) highlight carries a tip card; the rest are plain pose picks.
+	if (highlight.adjustable) {
+		const copy = document.createElement("p");
+		copy.className = "info-copy";
+		const lead = document.createElement("strong");
+		lead.textContent = `${highlight.label}.`;
+		copy.append(lead, ` ${highlight.body}`);
+		detail.append(copy);
 	}
 	box.append(chip, detail);
 	item.append(box);
 	return { item, box, chip, detail };
 }
-export function createRail(
-	list: HTMLElement,
-	sheet: HTMLElement,
-	previous: HTMLButtonElement,
-	upcoming: HTMLButtonElement,
-	onSelect: (highlight: Highlight) => void,
-): Rail {
+export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (highlight: Highlight) => void): Rail {
 	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 	const compact = window.matchMedia(COMPACT_QUERY);
 	const slider = foldControl();
@@ -100,7 +81,7 @@ export function createRail(
 	const items: HTMLLIElement[] = [];
 	const details: HTMLElement[] = [];
 	let current = HIGHLIGHTS[0]!;
-	let openId: string | null = current.id;
+	let openId: string | null = current.adjustable ? current.id : null;
 	let locked = true;
 	HIGHLIGHTS.forEach((highlight) => {
 		const { item, box, chip, detail } = buildItem(highlight);
@@ -206,13 +187,11 @@ export function createRail(
 			});
 			sheet.classList.add("is-collapsed");
 		}
-		previous.disabled = index <= 0;
-		upcoming.disabled = index >= HIGHLIGHTS.length - 1;
 		slider.disabled = locked || !current.adjustable || openId !== current.id;
 	}
 	function select(highlight: Highlight): void {
 		current = highlight;
-		openId = highlight.id;
+		openId = highlight.adjustable ? highlight.id : null;
 		morph(paint);
 		reveal(HIGHLIGHTS.indexOf(highlight), true);
 		onSelect(highlight);
@@ -222,18 +201,6 @@ export function createRail(
 		openId = null;
 		morph(paint);
 	}
-	function step(delta: number): void {
-		const next =
-			HIGHLIGHTS[
-				Math.min(
-					HIGHLIGHTS.length - 1,
-					Math.max(0, HIGHLIGHTS.indexOf(current) + delta),
-				)
-			];
-		if (next && next !== current) select(next);
-	}
-	previous.addEventListener("click", () => step(-1));
-	upcoming.addEventListener("click", () => step(1));
 	compact.addEventListener("change", () => {
 		paint();
 		reveal(HIGHLIGHTS.indexOf(current), false);
@@ -249,7 +216,6 @@ export function createRail(
 		},
 		select,
 		collapse,
-		step,
 		unlock() {
 			locked = false;
 			paint();

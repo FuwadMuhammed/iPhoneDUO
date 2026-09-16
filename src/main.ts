@@ -2,19 +2,14 @@ import './styles.css';
 import type { Highlight } from './device/highlights';
 import { requireElement } from './dom';
 import { createRail } from './ui/rail';
-import { Loader, Notice, Uploader } from './components';
+import { Loader, Notice } from './components';
 const notice = new Notice('#notice');
 const loader = new Loader('#loader');
-const uploader = new Uploader('#upload', '#upload-file', '#reset-upload');
 // The menu is plain DOM, so it renders straight away. Picks made while the model loads are remembered
 // through `rail.current` and the device arrives on whichever highlight is chosen.
 let onSelect: (highlight: Highlight) => void = () => {};
-const rail = createRail(
-  requireElement('#highlight-list'),
-  requireElement('#highlight-sheet'),
-  requireElement<HTMLButtonElement>('#previous-highlight'),
-  requireElement<HTMLButtonElement>('#next-highlight'),
-  (highlight) => onSelect(highlight),
+const rail = createRail(requireElement('#highlight-list'), requireElement('#highlight-sheet'), (highlight) =>
+  onSelect(highlight),
 );
 async function boot(): Promise<void> {
   loader.setProgress(0.02, 'Loading 3D model');
@@ -34,7 +29,6 @@ async function boot(): Promise<void> {
     rail,
     notice,
     loader,
-    uploader,
     bindSelect(handler) {
       onSelect = handler;
     },

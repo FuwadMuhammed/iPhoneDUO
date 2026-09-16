@@ -183,8 +183,9 @@ export interface Foldable {
 	setBlend(amount: number): void;
 	advanceBlend(delta: number): void;
 	render(renderer: WebGLRenderer): void;
-	showImage(image: HTMLCanvasElement): void;
-	clearImage(): void;
+	/** Sets (or clears, with null) the custom backdrop for one panel — already baked to its final
+	 *  orientation by paintHighlightImage, so this just swaps the texture in. */
+	setImage(kind: ScreenKind, image: HTMLCanvasElement | null): void;
 	/** Paints the remaining fitted lock screens during idle time so later highlights switch without a hitch. */
 	warmUp(): void;
 }
@@ -346,8 +347,10 @@ export function createFoldable(
 		};
 		idle(next);
 	}
-	let customTexture: Texture | null = null;
-	let retired: Texture | null = null;
+	// Each highlight's upload arrives already baked (by paintHighlightImage) to its exact final panel
+	// orientation, so this just holds one texture per panel — no rotation or per-direction cache here.
+	const customImages: Record<ScreenKind, Texture | null> = { inner: null, outer: null };
+	let retired: Texture[] = [];
 	const turn: Record<ScreenKind, ScreenTurn> = { inner: "none", outer: "none" };
 	let focus: ScreenKind | null = null;
 	let fade = 1;
@@ -361,10 +364,11 @@ export function createFoldable(
 			settled: focus === kind,
 			dim: kind === "inner" && focus === "outer",
 		};
-		if (customTexture)
+		const custom = customImages[kind];
+		if (custom)
 			return {
 				...common,
-				backdrop: customTexture,
+				backdrop: custom,
 				layered: false,
 				clock: false,
 			};
@@ -600,8 +604,8 @@ export function createFoldable(
 		if (fade >= 1) {
 			screens.inner.previous = null;
 			screens.outer.previous = null;
-			retired?.dispose();
-			retired = null;
+			for (const texture of retired) texture.dispose();
+			retired = [];
 		}
 		sync();
 	}
@@ -658,17 +662,11 @@ export function createFoldable(
 		viewAmount = amount;
 		sync();
 	}
-	function swapImage(texture: Texture | null): void {
-		retired?.dispose();
-		retired = customTexture;
-		customTexture = texture;
+	function setImage(kind: ScreenKind, image: HTMLCanvasElement | null): void {
+		const previous = customImages[kind];
+		if (previous) retired.push(previous);
+		customImages[kind] = image ? createTexture(image, anisotropy) : null;
 		dress();
-	}
-	function showImage(image: HTMLCanvasElement): void {
-		swapImage(createTexture(image, anisotropy));
-	}
-	function clearImage(): void {
-		swapImage(null);
 	}
 	return {
 		root,
@@ -678,8 +676,7 @@ export function createFoldable(
 		setViewpoint,
 		setBlend,
 		advanceBlend,
-		showImage,
-		clearImage,
+		setImage,
 		render,
 		warmUp,
 	};

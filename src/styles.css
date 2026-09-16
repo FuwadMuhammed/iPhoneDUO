@@ -1,6 +1,7 @@
 :root {
   --page: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
   --surface: rgba(255, 255, 255, 0.85);
+  --stage-backdrop: #f9fafb;
   --panel: rgba(240, 240, 242, 0.7);
   --text: #1d1d1f;
   --muted: rgba(29, 29, 31, 0.64);
@@ -55,36 +56,6 @@ button:disabled {
   outline-offset: 3px;
 }
 
-.site-links {
-  position: fixed;
-  z-index: 10;
-  top: 24px;
-  right: 24px;
-  display: flex;
-  gap: 8px;
-}
-
-.site-link {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--control);
-  color: var(--text);
-  transition: background 200ms ease;
-}
-
-.site-link:hover {
-  background: var(--control-hover);
-}
-
-.site-link svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-}
-
 .notice {
   position: fixed;
   z-index: 20;
@@ -109,17 +80,12 @@ button:disabled {
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin: 0 0 40px;
-  padding-inline: 88px;
+  margin: 0 0 24px;
 }
 
 .page-title {
   margin: 0;
-  font-size: 48px;
+  font-size: 40px;
   font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.003em;
@@ -130,9 +96,7 @@ button:disabled {
   height: clamp(560px, calc(100dvh - 200px), 800px);
   overflow: hidden;
   border-radius: 36px;
-  background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--stage-backdrop);
 }
 
 .stage {
@@ -238,37 +202,6 @@ button:disabled {
   pointer-events: auto;
 }
 
-.highlight-steps {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.step-button {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--control);
-  color: var(--text);
-}
-
-.step-button:disabled {
-  opacity: 0.32;
-}
-
-.step-button svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .highlight-sheet {
   display: none;
 }
@@ -315,6 +248,13 @@ button:disabled {
 .highlight.is-open .highlight-box {
   width: 100%;
   border-radius: 28px;
+}
+
+/* Highlights without a tip card never open, so their selected state needs its own marker at every
+   width — not just the mobile dock, which already inverted this pill for its own layout. */
+.highlight.is-current:not(.is-open) .highlight-box {
+  background: var(--text);
+  color: #fff;
 }
 
 .highlight-chip {
@@ -388,19 +328,6 @@ button:disabled {
   margin-top: 6px;
 }
 
-.sponsored-tag {
-  display: inline-block;
-  margin-bottom: 8px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--panel);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  opacity: 0.6;
-}
-
 .info-copy {
   margin: 0;
   font-size: 17px;
@@ -412,19 +339,6 @@ button:disabled {
 
 .info-copy strong {
   font-weight: 600;
-}
-
-.highlight-link {
-  display: inline-block;
-  margin-top: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.highlight-link:hover {
-  text-decoration: underline;
 }
 
 .fold-label {
@@ -489,70 +403,10 @@ button:disabled {
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.18);
 }
 
-.upload-row {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-}
-
-.upload-button {
-  font-size: 14px;
-  color: var(--accent);
-  white-space: nowrap;
-}
-
-.reset-button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--control);
-  color: var(--accent);
-  transition: background 200ms ease;
-}
-
-.reset-button[hidden] {
-  display: none;
-}
-
-.reset-button:hover {
-  background: var(--control-hover);
-}
-
-.reset-button svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.upload-button:hover {
-  text-decoration: underline;
-}
-
-.upload-button:disabled {
-  opacity: 0.4;
-  text-decoration: none;
-}
-
 @media (min-width: 901px) and (max-width: 1200px) {
   :root {
     --rail-left: 40px;
     --rail-width: 360px;
-  }
-
-  .page-header {
-    /* The right side stays clear of the fixed site links. */
-    padding-inline: 40px 88px;
-  }
-
-  .page-title {
-    font-size: 40px;
   }
 
   .highlight-chip {
@@ -571,10 +425,6 @@ button:disabled {
 
   .page-header {
     margin-bottom: 20px;
-  }
-
-  .page-title {
-    font-size: 40px;
   }
 
   .viewer {
@@ -606,22 +456,6 @@ button:disabled {
     justify-content: stretch;
   }
 
-  .site-links {
-    top: max(14px, env(safe-area-inset-top));
-    right: max(14px, env(safe-area-inset-right));
-    gap: 6px;
-  }
-
-  .site-link {
-    width: 34px;
-    height: 34px;
-  }
-
-  .site-link svg {
-    width: 16px;
-    height: 16px;
-  }
-
   .notice {
     top: max(16px, env(safe-area-inset-top));
   }
@@ -636,22 +470,14 @@ button:disabled {
 
   .page-header {
     flex: none;
-    flex-wrap: wrap;
-    align-items: baseline;
-    row-gap: 2px;
-    column-gap: 12px;
     min-height: 34px;
-    margin: 0 88px 12px 0;
+    margin: 0 0 12px;
     padding-inline: 8px;
   }
 
   .page-title {
     font-size: clamp(24px, 7vw, 32px);
     line-height: 34px;
-  }
-
-  .upload-button {
-    font-size: 13px;
   }
 
   .viewer {
@@ -680,10 +506,6 @@ button:disabled {
 
   .highlights > * {
     pointer-events: auto;
-  }
-
-  .highlight-steps {
-    display: none;
   }
 
   .highlight-sheet {
@@ -800,18 +622,8 @@ button:disabled {
     line-height: 1.45;
   }
 
-  .sponsored-tag {
-    margin-bottom: 6px;
-  }
-
   .fold-slider {
     margin-top: 2px;
-  }
-
-  .highlight-link {
-    margin-top: 8px;
-    min-height: 32px;
-    line-height: 32px;
   }
 }
 
@@ -828,10 +640,6 @@ button:disabled {
   .page-title {
     font-size: 22px;
     line-height: 30px;
-  }
-
-  .site-links {
-    top: max(8px, env(safe-area-inset-top));
   }
 
   .viewer {

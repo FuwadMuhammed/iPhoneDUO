@@ -10,6 +10,7 @@ export type ScreenImage = HTMLImageElement | HTMLCanvasElement;
 export type RollDirection = 'clockwise' | 'anticlockwise';
 export type ScreenPanel = 'inner' | 'outer';
 
+
 export interface ClockPlates {
   readonly time: ScreenImage;
   readonly chrome: ScreenImage;
@@ -125,28 +126,61 @@ export function paintPanelLockScreen(
   return canvas;
 }
 
-function paintFittedImage(image: ScreenImage): HTMLCanvasElement {
-  const canvas = createCanvas(INNER_WIDTH, HEIGHT);
+function paintFittedImage(image: ScreenImage, width = INNER_WIDTH, height = HEIGHT): HTMLCanvasElement {
+  const canvas = createCanvas(width, height);
   const context = canvasContext(canvas);
   context.fillStyle = '#101418';
   context.fillRect(0, 0, canvas.width, canvas.height);
   const source = image instanceof HTMLCanvasElement ? { width: image.width, height: image.height } : image;
-  const scale = Math.min(canvas.width / source.width, canvas.height / source.height);
-  const width = source.width * scale;
-  const height = source.height * scale;
-  context.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+  const scale = Math.min(width / source.width, height / source.height);
+  const drawWidth = source.width * scale;
+  const drawHeight = source.height * scale;
+  context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
   return canvas;
-}
-
-export async function paintCustomImage(file: File): Promise<HTMLCanvasElement> {
-  const url = URL.createObjectURL(file);
-  try {
-    return paintFittedImage(await loadImage(url));
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 export async function loadStaticImage(src: string): Promise<HTMLCanvasElement> {
   return paintFittedImage(await loadImage(src));
+}
+
+function panelWidthOf(panel: ScreenPanel): number {
+  return panel === 'inner' ? INNER_WIDTH : OUTER_WIDTH;
+}
+
+// The exact pixel box a custom upload for this panel/roll should be prepared at — surfaced so the
+// upload UI can tell people what to export their artwork at before picking a file.
+export function highlightImageSize(panel: ScreenPanel, turn: ScreenTurn): { width: number; height: number } {
+  const width = panelWidthOf(panel);
+  return turn === 'none' ? { width, height: HEIGHT } : { width: HEIGHT, height: width };
+}
+
+// Bakes an already-fitted image into a panelWidth x HEIGHT buffer, rotated so it reads upright once the
+// device (and its fixed screen UVs) rolls onto its side. Mirrors the turn math in paintPanelLockScreen.
+function rotateIntoPanel(image: ScreenImage, panelWidth: number, direction: RollDirection): HTMLCanvasElement {
+  const canvas = createCanvas(panelWidth, HEIGHT);
+  const context = canvasContext(canvas);
+  if (direction === 'clockwise') {
+    context.translate(panelWidth, 0);
+    context.rotate(Math.PI / 2);
+  } else {
+    context.translate(0, HEIGHT);
+    context.rotate(-Math.PI / 2);
+  }
+  context.drawImage(image, 0, 0);
+  return canvas;
+}
+
+// Fits a user's upload for one specific highlight's panel and roll, baking in any rotation up front so
+// the renderer can use it exactly like a lock-screen texture — no per-direction caching needed at all.
+export async function paintHighlightImage(file: File, panel: ScreenPanel, turn: ScreenTurn): Promise<HTMLCanvasElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await loadImage(url);
+    const width = panelWidthOf(panel);
+    if (turn === 'none') return paintFittedImage(image, width, HEIGHT);
+    const fitted = paintFittedImage(image, HEIGHT, width);
+    return rotateIntoPanel(fitted, width, turn);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
