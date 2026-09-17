@@ -116,6 +116,7 @@ interface ExportPanel {
   readonly previewName: HTMLElement;
   readonly changePose: HTMLButtonElement;
   readonly poses: HTMLDivElement;
+  readonly noImage: HTMLParagraphElement;
   readonly background: Segmented;
   readonly color: HTMLInputElement;
   readonly imageFormat: Segmented;
@@ -156,7 +157,10 @@ function buildExportPanel(root: HTMLElement): ExportPanel {
   const poses = document.createElement('div');
   poses.className = 'mockup-poses';
   poses.hidden = true;
-  previewSection.append(preview, previewRow, poses);
+  const noImage = document.createElement('p');
+  noImage.className = 'mockup-notice';
+  noImage.hidden = true;
+  previewSection.append(preview, previewRow, poses, noImage);
 
   const imagePane = document.createElement('div');
   imagePane.className = 'mockup-pane';
@@ -214,6 +218,7 @@ function buildExportPanel(root: HTMLElement): ExportPanel {
     previewName,
     changePose,
     poses,
+    noImage,
     background,
     color,
     imageFormat,
@@ -292,6 +297,11 @@ async function init(): Promise<void> {
     if (exportModal?.isOpen()) refreshPreview();
   });
 
+  // An upload made while the modal is up (via its "Upload now" link) should show in the preview.
+  window.addEventListener('iphoneduo:image', () => {
+    if (exportModal?.isOpen()) refreshPreview();
+  });
+
   // Tabs
   panel.tabs.onChange((tab) => {
     panel.imagePane.hidden = tab !== 'image';
@@ -360,6 +370,34 @@ async function init(): Promise<void> {
     for (const chip of panel.poses.querySelectorAll<HTMLButtonElement>('.mockup-pose-chip')) {
       chip.classList.toggle('is-active', chip.dataset.id === current?.id);
     }
+    const missing = !!bridge && !!current && !bridge.hasImage(current.id);
+    panel.noImage.replaceChildren();
+    if (missing && current) {
+      const uploadNow = document.createElement('button');
+      uploadNow.type = 'button';
+      uploadNow.className = 'mockup-notice-link';
+      uploadNow.textContent = 'Upload now';
+      // Takes the user to that pose's own upload box in the rail: close the modal, open the card, and
+      // briefly highlight the dropzone so it's obvious where to drop the file.
+      uploadNow.addEventListener('click', () => {
+        exportModal?.close();
+        bridge?.select(current.id);
+        window.setTimeout(() => {
+          const dropzone = document.querySelector<HTMLButtonElement>(
+            `.highlight-slot[data-upload-slot="${current.id}"] .upload-dropzone`,
+          );
+          if (!dropzone) return;
+          dropzone.focus({ preventScroll: true });
+          dropzone.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          dropzone.classList.add('is-attention');
+          window.setTimeout(() => dropzone.classList.remove('is-attention'), 1600);
+        }, 350);
+      });
+      const text = document.createElement('span');
+      text.append(`No screenshot uploaded for ${current.label} — it will export with the default screen. `, uploadNow);
+      panel.noImage.append(text);
+    }
+    panel.noImage.hidden = !missing;
     const background = currentBackground(false);
     panel.preview.style.background = background.transparent ? '' : background.color;
     panel.preview.classList.toggle('is-transparent', background.transparent);

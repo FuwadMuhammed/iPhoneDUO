@@ -5,7 +5,6 @@ const MORPH_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
 const NUDGE = 0.5;
 const SLIDER_STEPS = 1000;
 const PLUS_MARK = '<path d="M12 6.6v10.8M6.6 12h10.8" />';
-const DRAG_MARK = '<path d="M9.6 8 5.6 12l4 4M14.4 8l4 4-4 4" />';
 const COMPACT_QUERY =
 	"(max-width: 900px), (max-height: 540px) and (orientation: landscape)";
 export interface Rail {
@@ -51,11 +50,10 @@ function buildItem(highlight: Highlight): {
 	chip.type = "button";
 	chip.className = "highlight-chip";
 	chip.setAttribute("aria-expanded", "false");
+	// Every pose starts as a "+" (add an image); the badge turns accent-filled once one is uploaded.
 	const badge = document.createElement("span");
-	badge.className = highlight.adjustable
-		? "highlight-mark highlight-mark--drag"
-		: "highlight-mark";
-	badge.append(mark(highlight.adjustable ? DRAG_MARK : PLUS_MARK));
+	badge.className = "highlight-mark";
+	badge.append(mark(PLUS_MARK));
 	const name = document.createElement("span");
 	name.textContent = highlight.label;
 	chip.append(badge, name);

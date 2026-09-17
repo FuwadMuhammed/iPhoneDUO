@@ -353,7 +353,7 @@ button:disabled {
   background: #34c759;
 }
 
-.highlight-mark--drag {
+.highlight.has-upload .highlight-mark {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;

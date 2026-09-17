@@ -205,6 +205,22 @@
   display: none;
 }
 
+/* Brief pulse after "Upload now" in the Export modal lands the user on this box. */
+.upload-dropzone.is-attention {
+  animation: upload-attention 800ms ease-out 2;
+}
+
+@keyframes upload-attention {
+  0% {
+    border-color: var(--accent);
+    background: rgba(0, 113, 227, 0.14);
+    box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(0, 113, 227, 0);
+  }
+}
+
 .upload-dropzone > svg {
   width: 26px;
   height: 26px;
@@ -472,6 +488,51 @@
 .mockup-pose-chip.is-active {
   background: var(--text);
   color: #fff;
+}
+
+.mockup-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 149, 0, 0.12);
+  font-size: 12px;
+  line-height: 1.4;
+  color: #b25e00;
+}
+
+.mockup-notice::before {
+  content: '!';
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ff9500;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mockup-notice[hidden] {
+  display: none;
+}
+
+.mockup-notice-link {
+  display: inline;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mockup-notice-link:hover {
+  color: #8a4800;
 }
 
 .mockup-pane {

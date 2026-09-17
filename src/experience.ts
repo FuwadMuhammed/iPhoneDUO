@@ -52,6 +52,7 @@ export interface MockupBridge {
   readonly targets: readonly MockupImageTarget[];
   setImage(id: string, image: HTMLCanvasElement | null): void;
   select(id: string): void;
+  hasImage(id: string): boolean;
   current(): { readonly id: string; readonly label: string };
   isSettling(): boolean;
   // One frame of the stage at `scale` × the live pixel ratio, copied to a 2D canvas (alpha preserved).
@@ -60,6 +61,8 @@ export interface MockupBridge {
 declare global {
   interface WindowEventMap {
     'iphoneduo:bridge': CustomEvent<MockupBridge>;
+    // Fired by the upload UI after a pose's image is set or removed; detail is the highlight id.
+    'iphoneduo:image': CustomEvent<string>;
   }
 }
 function easeInOut(progress: number): number {
@@ -378,6 +381,9 @@ export async function start({ host, rack, rail, notice, loader, bindSelect }: Ex
     select(id) {
       const highlight = HIGHLIGHTS.find((entry) => entry.id === id);
       if (highlight) rail.select(highlight);
+    },
+    hasImage(id) {
+      return customImages.has(id);
     },
     current() {
       return { id: rail.current.id, label: rail.current.label };

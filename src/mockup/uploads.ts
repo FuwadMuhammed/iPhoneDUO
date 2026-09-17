@@ -129,6 +129,7 @@ function buildBox(bridge: MockupBridge, target: MockupBridge['targets'][number])
       (image) => {
         setImage(image, file.name);
         bridge.setImage(target.id, image);
+        window.dispatchEvent(new CustomEvent('iphoneduo:image', { detail: target.id }));
       },
       (error: unknown) => {
         console.error(error);
@@ -164,6 +165,7 @@ function buildBox(bridge: MockupBridge, target: MockupBridge['targets'][number])
     setImage(null);
     errorText.hidden = true;
     bridge.setImage(target.id, null);
+    window.dispatchEvent(new CustomEvent('iphoneduo:image', { detail: target.id }));
   });
 
   return box;
