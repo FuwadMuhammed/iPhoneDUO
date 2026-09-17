@@ -147,7 +147,7 @@ function panelWidthOf(panel: ScreenPanel): number {
   return panel === 'inner' ? INNER_WIDTH : OUTER_WIDTH;
 }
 
-// The exact pixel box a custom upload for this panel/roll should be prepared at — surfaced so the
+// The exact pixel box a custom upload for this panel/roll should be prepared at - surfaced so the
 // upload UI can tell people what to export their artwork at before picking a file.
 export function highlightImageSize(panel: ScreenPanel, turn: ScreenTurn): { width: number; height: number } {
   const width = panelWidthOf(panel);
@@ -171,7 +171,7 @@ function rotateIntoPanel(image: ScreenImage, panelWidth: number, direction: Roll
 }
 
 // Fits a user's upload for one specific highlight's panel and roll, baking in any rotation up front so
-// the renderer can use it exactly like a lock-screen texture — no per-direction caching needed at all.
+// the renderer can use it exactly like a lock-screen texture - no per-direction caching needed at all.
 export async function paintHighlightImage(file: File, panel: ScreenPanel, turn: ScreenTurn): Promise<HTMLCanvasElement> {
   const url = URL.createObjectURL(file);
   try {

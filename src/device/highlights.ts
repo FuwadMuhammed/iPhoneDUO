@@ -60,7 +60,7 @@ export const HIGHLIGHTS: readonly Highlight[] = [
   {
     id: 'seated',
     label: 'Seated',
-    body: 'Set iPhone Duo down and watch a show or follow a workout at the perfect viewing angle — with easy access to the controls on the bottom.',
+    body: 'Set iPhone Duo down and watch a show or follow a workout at the perfect viewing angle, with easy access to the controls on the bottom.',
     openness: 0.5,
     pose: [0, 0, QUARTER],
     view: { distance: 44, pitch: 1.34, yaw: 0 },

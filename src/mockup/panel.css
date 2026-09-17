@@ -4,7 +4,7 @@
    native app rather than a bolted-on widget.
 
    Buttons follow iOS's four system styles throughout: Plain (text only, tinted), Gray (neutral pill,
-   tinted content — rgba(120,120,128,…)), Tinted (accent-tinted pill — rgba(0,113,227,…)) and Filled
+   tinted content - rgba(120,120,128,…)), Tinted (accent-tinted pill - rgba(0,113,227,…)) and Filled
    (solid accent pill, white content). */
 
 .toolbar {
@@ -301,7 +301,7 @@
   opacity: 1;
 }
 
-/* Single row: check + size on the left, two icon buttons on the right — compact enough to never
+/* Single row: check + size on the left, two icon buttons on the right - compact enough to never
    need a second line even in the mobile sheet. */
 .upload-preview-foot {
   display: flex;
@@ -772,6 +772,15 @@
   animation: spin 700ms linear infinite;
 }
 
+/* Compact screens: match the 44px pose dropdown that sits level with this button on the left. */
+@media (max-width: 900px), (max-height: 540px) and (orientation: landscape) {
+  .toolbar-button {
+    height: 44px;
+    padding: 0 18px;
+    font-size: 14px;
+  }
+}
+
 @media (max-width: 480px) {
   .toolbar-button span {
     display: none;
@@ -779,7 +788,6 @@
 
   .toolbar-button {
     width: 44px;
-    height: 44px;
     padding: 0;
     justify-content: center;
   }

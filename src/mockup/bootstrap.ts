@@ -1,6 +1,6 @@
 // Wires the toolbar's Export button, the modal it opens, and renders the export controls into that
 // modal's body; also kicks off the per-pose upload boxes (uploads.ts) once the 3D chunk is ready. The fold
-// rig in src/device and src/stage is untouched — this only adds UI around it.
+// rig in src/device and src/stage is untouched - this only adds UI around it.
 import './panel.css';
 import { createModal } from './modals';
 import {
@@ -15,8 +15,7 @@ import {
 import type { MockupBridge } from '../experience';
 import { initUploads, whenBridgeReady } from './uploads';
 
-const DEFAULT_COLOR = '#f9fafb'; // matches the viewer's --stage-backdrop, so Solid exports read the same as the on-screen border
-const MAX_STILL_PIXELS = 40_000_000; // keeps 3× from allocating a canvas the GPU can't back on large retina viewports
+const DEFAULT_COLOR = '#ffffff'; // matches the viewer's --stage-backdrop, so Solid exports read the same as the on-screen border
 const CAMERA_ICON =
   '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/>';
 const RECORD_ICON = '<circle cx="12" cy="12" r="6"/>';
@@ -120,12 +119,9 @@ interface ExportPanel {
   readonly background: Segmented;
   readonly color: HTMLInputElement;
   readonly imageFormat: Segmented;
-  readonly size: Segmented;
-  readonly sizeHint: HTMLSpanElement;
   readonly exportButton: HTMLButtonElement;
   readonly imageStatus: HTMLSpanElement;
   readonly videoFormat: Segmented;
-  readonly resolution: Segmented;
   readonly frameRate: Segmented;
   readonly recordButton: HTMLButtonElement;
   readonly videoStatus: HTMLSpanElement;
@@ -175,14 +171,11 @@ function buildExportPanel(root: HTMLElement): ExportPanel {
   colorWrap.className = 'mockup-swatch-wrap';
   colorWrap.append(color);
   const imageFormat = createSegmented(['png', 'jpeg'], ['PNG', 'JPEG'], 'png');
-  const size = createSegmented(['1', '2', '3'], ['1×', '2×', '3×'], '1');
-  const sizeField = field('Size', size.element);
   const exportButton = iconButton('mockup-primary', CAMERA_ICON, 'Export as PNG');
   const imageStatus = statusLine();
   imagePane.append(
     field('Background', background.element, colorWrap).row,
     field('Format', imageFormat.element).row,
-    sizeField.row,
     exportButton,
     imageStatus,
   );
@@ -191,17 +184,15 @@ function buildExportPanel(root: HTMLElement): ExportPanel {
   videoPane.className = 'mockup-pane';
   videoPane.hidden = true;
   const videoFormat = createSegmented(['webm', 'mp4'], ['WebM', 'MP4'], 'webm');
-  const resolution = createSegmented(['source', '1080', '720'], ['Original', '1080p', '720p'], 'source');
   const frameRate = createSegmented(['30', '60'], ['30 fps', '60 fps'], '30');
   const recordTip = document.createElement('p');
   recordTip.className = 'mockup-tip';
-  recordTip.textContent = 'Recording starts right away — move the phone however you like, then press Stop in the toolbar.';
+  recordTip.textContent = 'Recording starts right away. Move the phone however you like, then press Stop in the toolbar.';
   const recordButton = iconButton('mockup-primary mockup-primary--record', RECORD_ICON, 'Create Video');
   recordButton.querySelector('svg')?.classList.add('mockup-record-dot');
   const videoStatus = statusLine();
   videoPane.append(
     field('Format', videoFormat.element).row,
-    field('Resolution', resolution.element).row,
     field('Frame rate', frameRate.element).row,
     recordTip,
     recordButton,
@@ -222,12 +213,9 @@ function buildExportPanel(root: HTMLElement): ExportPanel {
     background,
     color,
     imageFormat,
-    size,
-    sizeHint: sizeField.hint,
     exportButton,
     imageStatus,
     videoFormat,
-    resolution,
     frameRate,
     recordButton,
     videoStatus,
@@ -287,8 +275,6 @@ async function init(): Promise<void> {
   let recordingTimer: number | null = null;
   let recordingStartedAt = 0;
   let previewToken = 0;
-  // Crop size of the last 1× preview, so the Size hint can show the resulting pixel dimensions.
-  let baseSize: { width: number; height: number } | null = null;
 
   whenBridgeReady().then((ready) => {
     bridge = ready;
@@ -337,20 +323,6 @@ async function init(): Promise<void> {
     return { transparent: false, color: panel.color.value };
   }
 
-  function syncSizeHint(): void {
-    const scale = Number(panel.size.value);
-    if (!baseSize) {
-      panel.sizeHint.hidden = true;
-      return;
-    }
-    panel.sizeHint.textContent = `${Math.round(baseSize.width * scale)} × ${Math.round(baseSize.height * scale)} px`;
-    panel.sizeHint.hidden = false;
-    // 3× of a large retina canvas can exceed what the GPU will allocate; grey it out rather than fail.
-    const pixels3 = canvas.width * canvas.height * 9;
-    panel.size.setDisabled('3', pixels3 > MAX_STILL_PIXELS, 'Too large for this screen size — try 2×.');
-    if (pixels3 > MAX_STILL_PIXELS && panel.size.value === '3') panel.size.setValue('2');
-  }
-
   function syncImageControls(): void {
     const isJpeg = panel.imageFormat.value === 'jpeg';
     panel.background.setDisabled('transparent', isJpeg, 'JPEG has no transparency.');
@@ -358,11 +330,10 @@ async function init(): Promise<void> {
     panel.color.disabled = panel.background.value === 'transparent';
     const span = panel.exportButton.querySelector('span');
     if (span) span.textContent = `Export as ${panel.imageFormat.value.toUpperCase()}`;
-    syncSizeHint();
   }
 
   // Re-captures the thumbnail of what an export would produce right now. While the phone is still
-  // settling into a pose the capture is deferred — a mid-animation frame would be wrong. The token
+  // settling into a pose the capture is deferred - a mid-animation frame would be wrong. The token
   // drops stale attempts if settings change again before a deferred one runs.
   function refreshPreview(): void {
     const current = bridge?.current();
@@ -394,7 +365,7 @@ async function init(): Promise<void> {
         }, 350);
       });
       const text = document.createElement('span');
-      text.append(`No screenshot uploaded for ${current.label} — it will export with the default screen. `, uploadNow);
+      text.append(`No screenshot uploaded for ${current.label}. It will export with the default screen. `, uploadNow);
       panel.noImage.append(text);
     }
     panel.noImage.hidden = !missing;
@@ -411,10 +382,8 @@ async function init(): Promise<void> {
       }
       try {
         const still = composeStill(bridge.renderStill(1), canvas, background);
-        baseSize = { width: still.width, height: still.height };
         panel.previewImage.src = still.toDataURL('image/png');
         panel.preview.classList.remove('is-loading');
-        syncSizeHint();
       } catch (error) {
         console.error(error);
       }
@@ -445,7 +414,6 @@ async function init(): Promise<void> {
   panel.background.onChange(onImageSettingChange);
   panel.imageFormat.onChange(onImageSettingChange);
   panel.color.addEventListener('input', onImageSettingChange);
-  panel.size.onChange(syncSizeHint);
   syncImageControls();
 
   panel.exportButton.addEventListener('click', () => {
@@ -459,11 +427,10 @@ async function init(): Promise<void> {
     // JPEG has no alpha channel; fall back to white rather than let transparent areas turn black.
     const effective = format === 'jpeg' && background.transparent ? ({ transparent: false, color: '#ffffff' } as const) : background;
     const slug = bridge.current().id;
-    const scale = Number(panel.size.value);
-    // Let the busy state paint before the (synchronous) high-res render blocks the thread.
+    // Let the busy state paint before the (synchronous) render blocks the thread.
     window.setTimeout(() => {
       Promise.resolve()
-        .then(() => composeStill(bridge!.renderStill(scale), canvas, effective))
+        .then(() => composeStill(bridge!.renderStill(1), canvas, effective))
         .then((still) => exportStill(still, format, slug))
         .then(() => flash(panel.imageStatus, 'Saved.'))
         .catch((error: unknown) => {
@@ -501,13 +468,12 @@ async function init(): Promise<void> {
       return;
     }
     const format = panel.videoFormat.value as VideoFormat;
-    const height = panel.resolution.value === 'source' ? undefined : Number(panel.resolution.value);
     const fps = Number(panel.frameRate.value);
     panel.recordButton.disabled = true;
     panel.videoStatus.textContent = 'Starting…';
     panel.videoStatus.classList.add('is-busy');
     recorder
-      .start(canvas, format, currentBackground(true), { fps, height })
+      .start(canvas, format, currentBackground(true), { fps })
       .then(() => {
         const label = panel.recordButton.querySelector('span');
         if (label) label.textContent = 'Stop';

@@ -183,7 +183,7 @@ export interface Foldable {
 	setBlend(amount: number): void;
 	advanceBlend(delta: number): void;
 	render(renderer: WebGLRenderer): void;
-	/** Sets (or clears, with null) the custom backdrop for one panel — already baked to its final
+	/** Sets (or clears, with null) the custom backdrop for one panel - already baked to its final
 	 *  orientation by paintHighlightImage, so this just swaps the texture in. */
 	setImage(kind: ScreenKind, image: HTMLCanvasElement | null): void;
 	/** Paints the remaining fitted lock screens during idle time so later highlights switch without a hitch. */
@@ -348,7 +348,7 @@ export function createFoldable(
 		idle(next);
 	}
 	// Each highlight's upload arrives already baked (by paintHighlightImage) to its exact final panel
-	// orientation, so this just holds one texture per panel — no rotation or per-direction cache here.
+	// orientation, so this just holds one texture per panel - no rotation or per-direction cache here.
 	const customImages: Record<ScreenKind, Texture | null> = { inner: null, outer: null };
 	let retired: Texture[] = [];
 	const turn: Record<ScreenKind, ScreenTurn> = { inner: "none", outer: "none" };

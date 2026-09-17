@@ -71,6 +71,10 @@ function buildItem(highlight: Highlight): {
 export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (highlight: Highlight) => void): Rail {
 	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 	const compact = window.matchMedia(COMPACT_QUERY);
+	// On compact screens the list becomes a dropdown pinned to the viewer's top-left, so it moves out of
+	// the rack (which then only spans the bottom sheet and keeps the stage's obstacle box honest).
+	const rack = list.parentElement!;
+	const viewer = rack.parentElement!;
 	const slider = foldControl();
 	const boxes: HTMLElement[] = [];
 	const items: HTMLLIElement[] = [];
@@ -193,10 +197,12 @@ export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (hig
 				?.setAttribute("aria-expanded", String(open));
 		});
 		if (compact.matches) {
+			if (list.parentElement !== viewer) viewer.append(list);
 			const open = details[index];
 			if (open && sheet.firstElementChild !== open) sheet.replaceChildren(open);
 			sheet.classList.toggle("is-collapsed", openId === null);
 		} else {
+			if (list.parentElement !== rack) rack.append(list);
 			details.forEach((detail, at) => {
 				if (detail.parentElement !== boxes[at]) boxes[at]!.append(detail);
 			});

@@ -133,7 +133,7 @@ function buildBox(bridge: MockupBridge, target: MockupBridge['targets'][number])
       },
       (error: unknown) => {
         console.error(error);
-        errorText.textContent = "Couldn't use that image — try a different file.";
+        errorText.textContent = "Couldn't use that image. Try a different file.";
         errorText.hidden = false;
       },
     );

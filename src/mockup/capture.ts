@@ -1,7 +1,7 @@
 // Captures the existing WebGL canvas from the outside, via the standard captureStream API, so the
 // fold rig itself never needs preserveDrawingBuffer or any other change to how it renders. Every export
-// (still or video) is redrawn through one small 2D composite canvas so the chosen background — a solid
-// colour or, for PNG only, transparency — applies consistently regardless of what the source alpha does
+// (still or video) is redrawn through one small 2D composite canvas so the chosen background - a solid
+// colour or, for PNG only, transparency - applies consistently regardless of what the source alpha does
 // once it has gone through a <video> element or a video codec.
 const WEBM_CANDIDATES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
 const MP4_CANDIDATES = ['video/mp4;codecs=avc1', 'video/mp4'];
@@ -60,10 +60,10 @@ interface Bounds {
 
 // The stage renders the device onto a canvas much larger than the phone itself (it shares the frame with
 // empty margin and the highlight rail). The renderer clears to alpha 0 and the device is fully opaque, so
-// scanning for non-transparent pixels finds exactly the phone's silhouette — no stage/camera code needed.
+// scanning for non-transparent pixels finds exactly the phone's silhouette - no stage/camera code needed.
 const ALPHA_THRESHOLD = 10;
 // The light-grey margin the .viewer shows around the phone on screen (see --stage-backdrop in
-// styles.css) — kept in device pixels here so the export frames the phone exactly as it looks live.
+// styles.css) - kept in device pixels here so the export frames the phone exactly as it looks live.
 const BORDER_CSS_PX = 50;
 
 // `frameWidth` is the pixel width of whichever frame is being cropped (the live canvas, or a higher-res
@@ -152,7 +152,7 @@ class FrameMirror {
 }
 
 // Crops a rendered frame of the stage (see MockupBridge.renderStill) to the phone plus its on-screen
-// margin and composites the chosen background — exactly what an image export contains.
+// margin and composites the chosen background - exactly what an image export contains.
 export function composeStill(frame: HTMLCanvasElement, canvas: HTMLCanvasElement, background: Background): HTMLCanvasElement {
   const bounds = detectContentBounds(frame, frame.width, frame.height, borderPixels(canvas, frame.width));
   const out = document.createElement('canvas');
@@ -173,8 +173,6 @@ export async function exportStill(still: HTMLCanvasElement, format: ImageFormat,
 
 export interface RecordOptions {
   readonly fps: number;
-  // Output height in pixels; the width follows the crop's aspect. Omit to keep the source size.
-  readonly height?: number | undefined;
 }
 
 export class MockupRecorder {
@@ -201,10 +199,9 @@ export class MockupRecorder {
     // Cropped once from the opening frame; re-detecting every frame would zoom/pan the recording as the
     // device's silhouette changes size while it folds or rotates.
     const bounds = detectContentBounds(mirror.video, fullWidth, fullHeight, borderPixels(canvas));
-    const scale = options.height ? options.height / bounds.height : 1;
     // Even dimensions: H.264 in particular rejects odd sizes.
-    const outWidth = Math.max(2, Math.round((bounds.width * scale) / 2) * 2);
-    const outHeight = Math.max(2, Math.round((bounds.height * scale) / 2) * 2);
+    const outWidth = Math.max(2, Math.round(bounds.width / 2) * 2);
+    const outHeight = Math.max(2, Math.round(bounds.height / 2) * 2);
     const composite = document.createElement('canvas');
     composite.width = outWidth;
     composite.height = outHeight;

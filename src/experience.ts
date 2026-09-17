@@ -41,7 +41,7 @@ export interface ExperienceOptions {
   bindSelect(handler: (highlight: Highlight) => void): void;
 }
 // One upload slot per highlight, described so the upload UI can label it and show the exact pixel box
-// to prepare artwork at. Published on window once the experience is ready — see the bottom of start().
+// to prepare artwork at. Published on window once the experience is ready - see the bottom of start().
 export interface MockupImageTarget {
   readonly id: string;
   readonly label: string;
@@ -130,7 +130,7 @@ export async function start({ host, rack, rail, notice, loader, bindSelect }: Ex
   let showing = rail.current;
   const nudge = { yaw: 0, pitch: 0, shownYaw: 0, shownPitch: 0 };
   // One canvas per highlight id, already baked to that highlight's exact panel/orientation by the
-  // mockup module (see MockupBridge below) — applying one is just picking it up when it becomes current.
+  // mockup module (see MockupBridge below) - applying one is just picking it up when it becomes current.
   const customImages = new Map<string, HTMLCanvasElement>();
   // The header shows one of two lines: the getting-started hint while nothing is uploaded, or the
   // reset-all action once something is.

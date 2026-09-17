@@ -1,7 +1,7 @@
 :root {
-  --page: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+  --page: #f5f5f7;
   --surface: rgba(255, 255, 255, 0.85);
-  --stage-backdrop: #f9fafb;
+  --stage-backdrop: #ffffff;
   --panel: rgba(240, 240, 242, 0.7);
   --text: #1d1d1f;
   --muted: rgba(29, 29, 31, 0.64);
@@ -230,6 +230,17 @@ button:disabled {
   display: none;
 }
 
+/* Only shown on compact screens (see the media query below). */
+.loader-note {
+  display: none;
+  max-width: 220px;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--muted);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -300,7 +311,7 @@ button:disabled {
 }
 
 /* Highlights without a tip card never open, so their selected state needs its own marker at every
-   width — not just the mobile dock, which already inverted this pill for its own layout. */
+   width - not just the mobile dock, which already inverted this pill for its own layout. */
 .highlight.is-current:not(.is-open) .highlight-box {
   background: var(--text);
   color: #fff;
@@ -403,7 +414,7 @@ button:disabled {
   margin-top: 14px;
 }
 
-/* Empty until the 3D chunk boots and uploads.ts mounts the row — don't reserve space before then. */
+/* Empty until the 3D chunk boots and uploads.ts mounts the row - don't reserve space before then. */
 .highlight-slot:empty {
   display: none;
 }
@@ -534,10 +545,12 @@ button:disabled {
     padding-inline: 8px;
   }
 
-  /* The fixed-height column layout here has no room to spare, and the credit line would sit
-     directly under the floating Buy Me a Coffee button — desktop has space for both. */
-  .page-footer {
-    display: none;
+  /* The fixed-height column layout here has no room to spare for the credit line. The floating
+     Buy Me a Coffee button (injected by its script as #bmc-wbtn) is hidden too: it sits exactly over
+     the bottom-right corner of the pose sheet, covering the upload box's action buttons. */
+  .page-footer,
+  #bmc-wbtn {
+    display: none !important;
   }
 
   .page-title {
@@ -556,6 +569,13 @@ button:disabled {
     inset: 0 0 min(34%, 220px) 0;
   }
 
+  .loader-note {
+    display: block;
+  }
+
+  /* .highlights is just the bottom strip holding the expanded card (the sheet); the stage uses its
+     box to keep the phone clear. The pose dropdown is re-parented onto .viewer by rail.ts in compact
+     mode and pinned top-left, level with the Export button. */
   .highlights {
     top: auto;
     right: 0;
@@ -563,7 +583,6 @@ button:disabled {
     left: 0;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
     padding-bottom: 12px;
     transform: none;
     pointer-events: none;
@@ -592,7 +611,7 @@ button:disabled {
 
   .highlight-sheet.is-collapsed {
     height: 0;
-    margin-bottom: -10px;
+    margin-bottom: -12px;
     pointer-events: none;
   }
 
@@ -613,30 +632,23 @@ button:disabled {
   .highlight-list {
     --rail-width: auto;
 
-    position: relative;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
+    position: absolute;
+    z-index: 6;
+    top: 16px;
+    left: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     width: auto;
-    padding: 2px 10px;
-    overflow: auto hidden;
-    overscroll-behavior-x: contain;
-    scroll-padding-inline: 10px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-    touch-action: pan-x;
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 10px), transparent);
-    mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 10px), transparent);
-  }
-
-  .highlight-list::-webkit-scrollbar {
-    display: none;
+    max-width: calc(100% - 32px);
+    max-height: none;
+    padding: 0;
+    overflow: visible;
   }
 
   .highlight {
     flex: none;
     width: auto;
-    scroll-snap-align: center;
   }
 
   .highlight-box {
@@ -673,25 +685,18 @@ button:disabled {
   }
 
   /* Mobile shows one pose at a time: only the current chip is visible, and it doubles as a dropdown
-     trigger — tapping it reveals the rest of the poses as a vertical list instead of a horizontal
+     trigger - tapping it reveals the rest of the poses as a vertical list instead of a horizontal
      scroll row. */
   .highlight-list:not(.is-menu-open) .highlight:not(.is-current) {
     display: none;
   }
 
+  /* Open: the list grows downward from the trigger's spot into a floating menu. */
   .highlight-list.is-menu-open {
-    position: absolute;
-    z-index: 6;
-    left: 10px;
-    right: 10px;
-    bottom: calc(100% + 8px);
-    flex-direction: column;
-    align-items: stretch;
-    max-height: min(50dvh, 360px);
+    width: min(260px, calc(100% - 32px));
+    max-height: min(60dvh, 400px);
     padding: 8px;
     overflow-y: auto;
-    -webkit-mask-image: none;
-    mask-image: none;
     border-radius: 22px;
     background: var(--panel);
     backdrop-filter: blur(16px);
@@ -701,7 +706,6 @@ button:disabled {
 
   .highlight-list.is-menu-open .highlight {
     width: 100%;
-    scroll-snap-align: none;
   }
 
   .highlight-list.is-menu-open .highlight-box,
