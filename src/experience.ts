@@ -57,6 +57,10 @@ export interface MockupBridge {
   isSettling(): boolean;
   // One frame of the stage at `scale` × the live pixel ratio, copied to a 2D canvas (alpha preserved).
   renderStill(scale: number): HTMLCanvasElement;
+  // For the one pose with a fold slider: a frame of it fully open (its widest state), so a recording
+  // can size its crop to fit that too, even though it starts from whatever openness is showing right
+  // now. Null for every other pose, which has no way to change shape while recording.
+  maxOpennessFrame(): HTMLCanvasElement | null;
 }
 declare global {
   interface WindowEventMap {
@@ -410,6 +414,25 @@ export async function start({ host, rack, rail, notice, loader, bindSelect }: Ex
           foldable.render(renderer);
           stage.render();
         }
+      }
+      return out;
+    },
+    maxOpennessFrame() {
+      if (!rail.current.adjustable) return null;
+      const renderer = stage.renderer;
+      const out = document.createElement('canvas');
+      const previousOpenness = openness;
+      try {
+        foldable.setOpenness(1);
+        foldable.render(renderer);
+        stage.render();
+        out.width = renderer.domElement.width;
+        out.height = renderer.domElement.height;
+        out.getContext('2d')?.drawImage(renderer.domElement, 0, 0);
+      } finally {
+        foldable.setOpenness(previousOpenness);
+        foldable.render(renderer);
+        stage.render();
       }
       return out;
     },

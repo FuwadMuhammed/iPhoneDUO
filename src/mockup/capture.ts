@@ -108,6 +108,17 @@ function detectContentBounds(source: CanvasImageSource, width: number, height: n
   };
 }
 
+function unionBounds(a: Bounds, b: Bounds): Bounds {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) - x,
+    height: Math.max(a.y + a.height, b.y + b.height) - y,
+  };
+}
+
 function paintFrame(
   context: CanvasRenderingContext2D,
   source: CanvasImageSource,
@@ -173,6 +184,11 @@ export async function exportStill(still: HTMLCanvasElement, format: ImageFormat,
 
 export interface RecordOptions {
   readonly fps: number;
+  // A frame of the pose fully open (its widest state), from MockupBridge.maxOpennessFrame(). The
+  // recording's crop is sized to fit both this and the opening frame, so opening the fold slider mid-
+  // recording doesn't get cut off by a crop sized to whatever openness happened to be showing at the
+  // start (see the comment above where bounds is used, below).
+  readonly widestFrame?: HTMLCanvasElement | null;
 }
 
 export class MockupRecorder {
@@ -196,9 +212,15 @@ export class MockupRecorder {
     await mirror.ready();
     const fullWidth = mirror.video.videoWidth || canvas.width;
     const fullHeight = mirror.video.videoHeight || canvas.height;
-    // Cropped once from the opening frame; re-detecting every frame would zoom/pan the recording as the
-    // device's silhouette changes size while it folds or rotates.
-    const bounds = detectContentBounds(mirror.video, fullWidth, fullHeight, borderPixels(canvas));
+    // Cropped once from the opening frame (widened to also fit the fully-open fold state, if this pose
+    // has a slider - see widestFrame above); re-detecting every frame would zoom/pan the recording as
+    // the device's silhouette changes size while it folds or rotates.
+    let bounds = detectContentBounds(mirror.video, fullWidth, fullHeight, borderPixels(canvas));
+    if (options.widestFrame) {
+      const wide = options.widestFrame;
+      const wideBounds = detectContentBounds(wide, wide.width, wide.height, borderPixels(canvas, wide.width));
+      bounds = unionBounds(bounds, wideBounds);
+    }
     // Even dimensions: H.264 in particular rejects odd sizes.
     const outWidth = Math.max(2, Math.round(bounds.width / 2) * 2);
     const outHeight = Math.max(2, Math.round(bounds.height / 2) * 2);

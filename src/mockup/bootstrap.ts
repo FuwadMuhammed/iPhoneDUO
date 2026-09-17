@@ -462,6 +462,25 @@ async function init(): Promise<void> {
     });
   }
 
+  // The recorder crops to the pose's silhouette once, from its very first captured frame, and keeps
+  // that crop for the whole recording (re-detecting every frame would zoom/pan as the device folds or
+  // rotates). Starting while the pose is still mid-settle animation would lock in a too-small,
+  // not-yet-final crop, cutting off the edges of the device for the entire video once it finishes
+  // settling - so wait for the same isSettling() signal the preview thumbnail already waits on. The
+  // record button stays disabled for the duration, so there's no re-entrant call to guard against.
+  function waitForSettle(): Promise<void> {
+    return new Promise((resolve) => {
+      const attempt = (): void => {
+        if (!bridge || !bridge.isSettling()) {
+          resolve();
+          return;
+        }
+        window.setTimeout(attempt, 200);
+      };
+      attempt();
+    });
+  }
+
   panel.recordButton.addEventListener('click', () => {
     if (recorder.active) {
       stopRecording();
@@ -472,8 +491,11 @@ async function init(): Promise<void> {
     panel.recordButton.disabled = true;
     panel.videoStatus.textContent = 'Starting…';
     panel.videoStatus.classList.add('is-busy');
-    recorder
-      .start(canvas, format, currentBackground(true), { fps })
+    waitForSettle()
+      .then(() => {
+        const widestFrame = bridge?.maxOpennessFrame() ?? null;
+        return recorder.start(canvas, format, currentBackground(true), { fps, widestFrame });
+      })
       .then(() => {
         const label = panel.recordButton.querySelector('span');
         if (label) label.textContent = 'Stop';
