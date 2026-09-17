@@ -66,8 +66,10 @@ const ALPHA_THRESHOLD = 10;
 // styles.css) — kept in device pixels here so the export frames the phone exactly as it looks live.
 const BORDER_CSS_PX = 50;
 
-function borderPixels(canvas: HTMLCanvasElement): number {
-  const scale = canvas.clientWidth > 0 ? canvas.width / canvas.clientWidth : 1;
+// `frameWidth` is the pixel width of whichever frame is being cropped (the live canvas, or a higher-res
+// still of it); `canvas` supplies the on-screen CSS width the border is defined against.
+function borderPixels(canvas: HTMLCanvasElement, frameWidth = canvas.width): number {
+  const scale = canvas.clientWidth > 0 ? frameWidth / canvas.clientWidth : 1;
   return Math.round(BORDER_CSS_PX * scale);
 }
 
@@ -106,14 +108,20 @@ function detectContentBounds(source: CanvasImageSource, width: number, height: n
   };
 }
 
-function paintFrame(context: CanvasRenderingContext2D, source: CanvasImageSource, bounds: Bounds, background: Background): void {
-  const { width, height } = bounds;
-  context.clearRect(0, 0, width, height);
+function paintFrame(
+  context: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  bounds: Bounds,
+  background: Background,
+  outWidth = bounds.width,
+  outHeight = bounds.height,
+): void {
+  context.clearRect(0, 0, outWidth, outHeight);
   if (!background.transparent) {
     context.fillStyle = background.color;
-    context.fillRect(0, 0, width, height);
+    context.fillRect(0, 0, outWidth, outHeight);
   }
-  context.drawImage(source, bounds.x, bounds.y, width, height, 0, 0, width, height);
+  context.drawImage(source, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, outWidth, outHeight);
 }
 
 // Mirrors the source canvas into a hidden <video> via captureStream, purely so callers can read a live
@@ -143,32 +151,30 @@ class FrameMirror {
   }
 }
 
-export async function snapshotCanvas(
-  canvas: HTMLCanvasElement,
-  format: ImageFormat,
-  background: Background,
-): Promise<void> {
-  const mirror = new FrameMirror(canvas, 30);
-  try {
-    await mirror.ready();
-    const fullWidth = mirror.video.videoWidth || canvas.width;
-    const fullHeight = mirror.video.videoHeight || canvas.height;
-    const bounds = detectContentBounds(mirror.video, fullWidth, fullHeight, borderPixels(canvas));
-    const out = document.createElement('canvas');
-    out.width = bounds.width;
-    out.height = bounds.height;
-    const context = out.getContext('2d');
-    if (!context) throw new Error('A 2D canvas context is not available.');
-    // JPEG has no alpha channel; fall back to white rather than let transparent areas turn black.
-    const effective = format === 'jpeg' && background.transparent ? { transparent: false, color: '#ffffff' } as const : background;
-    paintFrame(context, mirror.video, bounds, effective);
-    const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
-    const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, mime, JPEG_QUALITY));
-    if (!blob) throw new Error('Could not encode the snapshot.');
-    download(blob, `iphone-duo-mockup-${Date.now()}.${format === 'jpeg' ? 'jpg' : 'png'}`);
-  } finally {
-    mirror.dispose();
-  }
+// Crops a rendered frame of the stage (see MockupBridge.renderStill) to the phone plus its on-screen
+// margin and composites the chosen background — exactly what an image export contains.
+export function composeStill(frame: HTMLCanvasElement, canvas: HTMLCanvasElement, background: Background): HTMLCanvasElement {
+  const bounds = detectContentBounds(frame, frame.width, frame.height, borderPixels(canvas, frame.width));
+  const out = document.createElement('canvas');
+  out.width = bounds.width;
+  out.height = bounds.height;
+  const context = out.getContext('2d');
+  if (!context) throw new Error('A 2D canvas context is not available.');
+  paintFrame(context, frame, bounds, background);
+  return out;
+}
+
+export async function exportStill(still: HTMLCanvasElement, format: ImageFormat, slug = 'mockup'): Promise<void> {
+  const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+  const blob = await new Promise<Blob | null>((resolve) => still.toBlob(resolve, mime, JPEG_QUALITY));
+  if (!blob) throw new Error('Could not encode the snapshot.');
+  download(blob, `iphone-duo-${slug}-${Date.now()}.${format === 'jpeg' ? 'jpg' : 'png'}`);
+}
+
+export interface RecordOptions {
+  readonly fps: number;
+  // Output height in pixels; the width follows the crop's aspect. Omit to keep the source size.
+  readonly height?: number | undefined;
 }
 
 export class MockupRecorder {
@@ -183,8 +189,9 @@ export class MockupRecorder {
     return this.recorder !== null;
   }
 
-  async start(canvas: HTMLCanvasElement, format: VideoFormat, background: Background, fps = 30): Promise<void> {
+  async start(canvas: HTMLCanvasElement, format: VideoFormat, background: Background, options: RecordOptions): Promise<void> {
     if (this.recorder) return;
+    const { fps } = options;
     const mimeType = pickVideoMimeType(format);
     if (!mimeType) throw new Error(`This browser cannot record ${format.toUpperCase()} video.`);
     const mirror = new FrameMirror(canvas, fps);
@@ -194,9 +201,13 @@ export class MockupRecorder {
     // Cropped once from the opening frame; re-detecting every frame would zoom/pan the recording as the
     // device's silhouette changes size while it folds or rotates.
     const bounds = detectContentBounds(mirror.video, fullWidth, fullHeight, borderPixels(canvas));
+    const scale = options.height ? options.height / bounds.height : 1;
+    // Even dimensions: H.264 in particular rejects odd sizes.
+    const outWidth = Math.max(2, Math.round((bounds.width * scale) / 2) * 2);
+    const outHeight = Math.max(2, Math.round((bounds.height * scale) / 2) * 2);
     const composite = document.createElement('canvas');
-    composite.width = bounds.width;
-    composite.height = bounds.height;
+    composite.width = outWidth;
+    composite.height = outHeight;
     const context = composite.getContext('2d');
     if (!context) {
       mirror.dispose();
@@ -205,7 +216,7 @@ export class MockupRecorder {
     // Video containers do not carry alpha reliably across browsers, so recordings always use a solid fill.
     const solid: Background = background.transparent ? { transparent: false, color: '#ffffff' } : background;
     const draw = (): void => {
-      paintFrame(context, mirror.video, bounds, solid);
+      paintFrame(context, mirror.video, bounds, solid, outWidth, outHeight);
       this.rafId = requestAnimationFrame(draw);
     };
     draw();

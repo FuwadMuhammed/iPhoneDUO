@@ -61,6 +61,8 @@
     <main class="page">
       <div class="page-header">
         <h1 class="page-title">iPhone Duo Mockup Generator</h1>
+        <p class="page-hint" id="empty-hint">Upload your own screenshots to get started.</p>
+        <button type="button" id="reset-all-uploads" class="page-action" hidden>Reset all images</button>
       </div>
 
       <section class="viewer" aria-label="iPhone Duo mockup preview">
@@ -92,10 +94,6 @@
         </div>
 
         <div class="toolbar">
-          <button type="button" id="open-upload" class="toolbar-button" aria-haspopup="dialog">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V5M7.5 9.5 12 5l4.5 4.5" /><path d="M4.5 19h15" /></svg>
-            <span>Upload</span>
-          </button>
           <button type="button" id="open-export" class="toolbar-button toolbar-button--primary" aria-haspopup="dialog">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v10M7.5 10.5 12 15l4.5-4.5" /><path d="M4.5 19h15" /></svg>
             <span>Export</span>
@@ -103,26 +101,12 @@
         </div>
 
       </section>
-    </main>
 
-    <div class="modal-backdrop" id="upload-modal" hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
-        <div class="modal-head">
-          <h2 id="upload-modal-title">Upload images</h2>
-          <button type="button" class="modal-close" data-close-modal aria-label="Close">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-intro">One image per state — each is fitted to that state's exact screen.</p>
-          <div class="upload-list" id="upload-list"></div>
-        </div>
-        <div class="modal-foot">
-          <button type="button" id="reset-all-uploads" class="modal-secondary">Reset all</button>
-          <button type="button" class="modal-primary" data-close-modal>Save</button>
-        </div>
-      </div>
-    </div>
+      <footer class="page-footer">
+        Inspired by akashtdev's Duo concept. Made with <span aria-hidden="true">❤️</span> by
+        <a href="https://www.instagram.com/fuwad.design" target="_blank" rel="noopener noreferrer">fuwad.design</a>
+      </footer>
+    </main>
 
     <div class="modal-backdrop" id="export-modal" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">

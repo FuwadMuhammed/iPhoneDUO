@@ -15,6 +15,7 @@ export interface Rail {
 	select(highlight: Highlight): void;
 	collapse(): void;
 	unlock(): void;
+	markUploaded(id: string, hasImage: boolean): void;
 }
 function mark(paths: string): SVGSVGElement {
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -60,15 +61,11 @@ function buildItem(highlight: Highlight): {
 	chip.append(badge, name);
 	const detail = document.createElement("div");
 	detail.className = "highlight-detail";
-	// Only the adjustable (Foldable design) highlight carries a tip card; the rest are plain pose picks.
-	if (highlight.adjustable) {
-		const copy = document.createElement("p");
-		copy.className = "info-copy";
-		const lead = document.createElement("strong");
-		lead.textContent = `${highlight.label}.`;
-		copy.append(lead, ` ${highlight.body}`);
-		detail.append(copy);
-	}
+	// The chip (and its label) fades out while a card is open, so the card names itself.
+	const heading = document.createElement("span");
+	heading.className = "highlight-heading";
+	heading.textContent = highlight.label;
+	detail.append(heading);
 	box.append(chip, detail);
 	item.append(box);
 	return { item, box, chip, detail };
@@ -81,8 +78,9 @@ export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (hig
 	const items: HTMLLIElement[] = [];
 	const details: HTMLElement[] = [];
 	let current = HIGHLIGHTS[0]!;
-	let openId: string | null = current.adjustable ? current.id : null;
+	let openId: string | null = current.id;
 	let locked = true;
+	let menuOpen = false;
 	HIGHLIGHTS.forEach((highlight) => {
 		const { item, box, chip, detail } = buildItem(highlight);
 		if (highlight.adjustable) {
@@ -94,7 +92,25 @@ export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (hig
 			control.append(hint, slider);
 			detail.append(control);
 		}
-		chip.addEventListener("click", () => select(highlight));
+		// Filled by the mockup module once the 3D chunk is up (see uploads.ts). Keyed by attribute
+		// rather than by item id because paint() re-parents the detail into the sheet on mobile.
+		const slot = document.createElement("div");
+		slot.className = "highlight-slot";
+		slot.dataset.uploadSlot = highlight.id;
+		detail.append(slot);
+		chip.addEventListener("click", () => {
+				// In compact mode the current chip is a dropdown trigger, not a re-select: tapping it
+				// just opens/closes the list of other poses instead of re-running the settle animation.
+				if (compact.matches) {
+					if (highlight.id === current.id) {
+						menuOpen = !menuOpen;
+						paint();
+						return;
+					}
+					menuOpen = false;
+				}
+				select(highlight);
+			});
 		list.append(item);
 		boxes.push(box);
 		items.push(item);
@@ -169,6 +185,7 @@ export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (hig
 	}
 	function paint(): void {
 		const index = HIGHLIGHTS.indexOf(current);
+		list.classList.toggle("is-menu-open", compact.matches && menuOpen);
 		items.forEach((item, at) => {
 			const open = HIGHLIGHTS[at]!.id === openId;
 			item.classList.toggle("is-open", open);
@@ -191,19 +208,27 @@ export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (hig
 	}
 	function select(highlight: Highlight): void {
 		current = highlight;
-		openId = highlight.adjustable ? highlight.id : null;
+		openId = highlight.id;
 		morph(paint);
 		reveal(HIGHLIGHTS.indexOf(highlight), true);
 		onSelect(highlight);
 	}
 	function collapse(): void {
+		menuOpen = false;
 		if (openId === null) return;
 		openId = null;
 		morph(paint);
 	}
 	compact.addEventListener("change", () => {
+		menuOpen = false;
 		paint();
 		reveal(HIGHLIGHTS.indexOf(current), false);
+	});
+	document.addEventListener("click", (event) => {
+		if (!compact.matches || !menuOpen) return;
+		if (list.contains(event.target as Node)) return;
+		menuOpen = false;
+		paint();
 	});
 	paint();
 	return {
@@ -219,6 +244,10 @@ export function createRail(list: HTMLElement, sheet: HTMLElement, onSelect: (hig
 		unlock() {
 			locked = false;
 			paint();
+		},
+		markUploaded(id, hasImage) {
+			const index = HIGHLIGHTS.findIndex((entry) => entry.id === id);
+			items[index]?.classList.toggle("has-upload", hasImage);
 		},
 	};
 }

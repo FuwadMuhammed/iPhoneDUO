@@ -52,6 +52,10 @@ export interface MockupBridge {
   readonly targets: readonly MockupImageTarget[];
   setImage(id: string, image: HTMLCanvasElement | null): void;
   select(id: string): void;
+  current(): { readonly id: string; readonly label: string };
+  isSettling(): boolean;
+  // One frame of the stage at `scale` × the live pixel ratio, copied to a 2D canvas (alpha preserved).
+  renderStill(scale: number): HTMLCanvasElement;
 }
 declare global {
   interface WindowEventMap {
@@ -125,6 +129,15 @@ export async function start({ host, rack, rail, notice, loader, bindSelect }: Ex
   // One canvas per highlight id, already baked to that highlight's exact panel/orientation by the
   // mockup module (see MockupBridge below) — applying one is just picking it up when it becomes current.
   const customImages = new Map<string, HTMLCanvasElement>();
+  // The header shows one of two lines: the getting-started hint while nothing is uploaded, or the
+  // reset-all action once something is.
+  const emptyHint = document.getElementById('empty-hint');
+  const resetAll = document.getElementById('reset-all-uploads');
+  function updateEmptyHint(): void {
+    const empty = customImages.size === 0;
+    if (emptyHint) emptyHint.hidden = !empty;
+    if (resetAll) resetAll.hidden = empty;
+  }
   function applyHighlightImage(highlight: Highlight): void {
     const image = customImages.get(highlight.id) ?? null;
     if (highlight.adjustable) {
@@ -357,12 +370,42 @@ export async function start({ host, rack, rail, notice, loader, bindSelect }: Ex
     setImage(id, image) {
       if (image) customImages.set(id, image);
       else customImages.delete(id);
+      rail.markUploaded(id, image !== null);
+      updateEmptyHint();
       const highlight = HIGHLIGHTS.find((entry) => entry.id === id);
       if (highlight && rail.current.id === id) applyHighlightImage(highlight);
     },
     select(id) {
       const highlight = HIGHLIGHTS.find((entry) => entry.id === id);
       if (highlight) rail.select(highlight);
+    },
+    current() {
+      return { id: rail.current.id, label: rail.current.label };
+    },
+    isSettling() {
+      return settle !== null;
+    },
+    renderStill(scale) {
+      const renderer = stage.renderer;
+      const ratio = renderer.getPixelRatio();
+      const out = document.createElement('canvas');
+      try {
+        if (scale !== 1) renderer.setPixelRatio(ratio * scale);
+        foldable.render(renderer);
+        stage.render();
+        // Read back in the same task as the render: the drawing buffer is still intact until the
+        // browser composites, so this works without preserveDrawingBuffer.
+        out.width = renderer.domElement.width;
+        out.height = renderer.domElement.height;
+        out.getContext('2d')?.drawImage(renderer.domElement, 0, 0);
+      } finally {
+        if (scale !== 1) {
+          renderer.setPixelRatio(ratio);
+          foldable.render(renderer);
+          stage.render();
+        }
+      }
+      return out;
     },
   };
   window.dispatchEvent(new CustomEvent('iphoneduo:bridge', { detail: bridge }));
